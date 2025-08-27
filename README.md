@@ -1,16 +1,22 @@
-# learnify_rewards
+# Learn & Earn — Starter Scaffold
 
-A new Flutter project.
+This is a minimal starter scaffold for the "Learn & Earn" app described in the provided brief.
 
-## Getting Started
+What you'll find here:
 
-This project is a starting point for a Flutter application.
+- `pubspec.yaml` — minimal Flutter package manifest.
+- `lib/main.dart` — tiny runnable Flutter app demonstrating activities and earnings placeholders.
+- `firestore.rules` — starter Firestore security rules (v2) matching the data model in the brief.
+- `remote_config_defaults.json` — initial Remote Config / `/config` defaults used by the app and Cloud Functions.
+- `data_dictionary.md` — concise Firestore data model summary.
 
-A few resources to get you started if this is your first Flutter project:
+How to open
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- Open this folder in VS Code or Android Studio.
+- Run `flutter pub get` in the project folder and run the app on a device or emulator.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Next steps
+
+- Wire Firebase (Auth / Firestore / Remote Config) and set up Cloud Functions.
+- Implement the LP/AER calculation functions and admin console.
+- Add tests and CI config.

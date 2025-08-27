@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users: authenticated users can read their own doc; admins have elevated access.
+    match /users/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && request.auth.uid == userId;
+      allow delete: if false; // deletions go through compliance workflow
+    }
+
+    // Activities: public read, admins can write
+    match /activities/{activityId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // lpEvents: users write their own events but server must validate (Cloud Functions) for authoritative marking
+    match /lpEvents/{userId}/{eventId} {
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow update, delete: if isAdmin();
+    }
+
+    // adEvents and aerEvents: client may write provisional records but server must validate
+    match /adEvents/{userId}/{eventId} {
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isAdmin() || request.auth.token.firebase.sign_in_provider == 'admin';
+      allow delete: if isAdmin();
+    }
+
+    match /aerEvents/{userId}/{eventId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow create: if false; // only server should create AER records after validation
+      allow update, delete: if isAdmin();
+    }
+
+    // Withdrawals: users can create requests; finance ops/admins can change status
+    match /withdrawals/{userId}/{withdrawId} {
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isFinance() || isAdmin();
+      allow delete: if false;
+    }
+
+    // Config: admins only
+    match /config/{doc} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Audit logs: only admins and security analysts
+    match /auditLogs/{logId} {
+      allow read: if isAdmin() || isSecurityAnalyst();
+      allow create: if false;
+      allow update, delete: if false;
+    }
+
+    // Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function hasRole(role) {
+      return request.auth != null && request.auth.token.role == role;
+    }
+
+    function isAdmin() {
+      return hasRole('admin') || hasRole('superadmin');
+    }
+
+    function isFinance() {
+      return hasRole('finance') || hasRole('superadmin');
+    }
+
+    function isSecurityAnalyst() {
+      return hasRole('security') || hasRole('superadmin');
+    }
+  }
+}
