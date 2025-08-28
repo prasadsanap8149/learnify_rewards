@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Google Mobile Ads dimensions -->
+    <dimen name="gnt_no_size">0dp</dimen>
+    <dimen name="gnt_no_margin">0dp</dimen>
+    <dimen name="gnt_small_margin">4dp</dimen>
+    <dimen name="gnt_default_margin">8dp</dimen>
+    <dimen name="gnt_text_size_large">16sp</dimen>
+    <dimen name="gnt_text_size_medium">14sp</dimen>
+    <dimen name="gnt_text_size_small">12sp</dimen>
+</resources>

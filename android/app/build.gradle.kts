@@ -37,12 +37,12 @@ android {
 
         // App store metadata
         setProperty("archivesBaseName", "learnify-rewards-v$versionName")
-        
+
         // Enable vector drawables support
         vectorDrawables {
             useSupportLibrary = true
         }
-        
+
         // Proguard configuration for release builds
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -56,15 +56,15 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            
+
             // TODO: Add your own signing config for the release build
             // signingConfig = signingConfigs.getByName("release")
             signingConfig = signingConfigs.getByName("debug")
-            
+
             // Firebase Performance monitoring for production
             buildConfigField("boolean", "ENABLE_FIREBASE_PERFORMANCE", "true")
         }
-        
+
         debug {
             isDebuggable = true
             applicationIdSuffix = ".debug"
@@ -104,7 +104,11 @@ dependencies {
     implementation("com.google.firebase:firebase-perf-ktx")
     implementation("com.google.firebase:firebase-messaging-ktx")
     implementation("com.google.firebase:firebase-config-ktx")
-    
+
+    // Google Mobile Ads dependencies
+    implementation("com.google.android.gms:play-services-ads:23.6.0")
+    implementation("androidx.browser:browser:1.8.0")
+
     // Additional dependencies for app store features
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.5")
