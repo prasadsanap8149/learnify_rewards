@@ -9,9 +9,9 @@ plugins {
 }
 
 android {
-    namespace = "com.learnifyrewards.app"
+    namespace = "com.prasadSanap.learnify_rewards.app"
     compileSdk = 35
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -28,7 +28,7 @@ android {
 
     defaultConfig {
         // Unique Application ID for Google Play Store
-        applicationId = "com.learnifyrewards.app"
+        applicationId = "com.prasadSanap.learnify_rewards.app"
         // Minimum SDK for modern Android features
         minSdk = 21
         targetSdk = 35

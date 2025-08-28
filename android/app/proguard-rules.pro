@@ -52,7 +52,7 @@
 -keep class * implements com.google.gson.JsonDeserializer
 
 # Keep model classes for serialization
--keep class com.learnifyrewards.app.models.** { *; }
+-keep class com.prasadSanap.learnify_rewards.app.models.** { *; }
 
 # Remove logging in release builds
 -assumenosideeffects class android.util.Log {
