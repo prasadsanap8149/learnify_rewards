@@ -1,4 +1,4 @@
-package com.example.learnify_rewards
+package com.prasadSanap.learnify_rewards
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -1,37 +1,26 @@
 {
   "project_info": {
-    "project_number": "1234567890",
-    "firebase_url": "https://learnify-rewards.firebaseio.com",
-    "project_id": "learnify-rewards",
-    "storage_bucket": "learnify-rewards.appspot.com"
+    "project_number": "832734789522",
+    "project_id": "lernify-reward-dev",
+    "storage_bucket": "lernify-reward-dev.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1234567890:android:abcdef1234567890",
+        "mobilesdk_app_id": "1:832734789522:android:3336f1a8b465d7ee150b4b",
         "android_client_info": {
-          "package_name": "com.example.learnify_rewards"
+          "package_name": "com.prasadSanap.learnify_rewards"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "1234567890-abcdef1234567890.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyABCDEFGHIJKLmnopqrstuvwxyz123456"
+          "current_key": "AIzaSyAjtLGKfiB8Ot49PmxqcSW2C1auOcWt8X8"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "1234567890-abcdef1234567890.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }
