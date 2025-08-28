@@ -1,82 +1,191 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Users: authenticated users can read their own doc; admins have elevated access.
-    match /users/{userId} {
-      allow read: if isSignedIn() && request.auth.uid == userId;
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isSignedIn() && request.auth.uid == userId;
-      allow delete: if false; // deletions go through compliance workflow
-    }
-
-    // Activities: public read, admins can write
-    match /activities/{activityId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
-    }
-
-    // lpEvents: users write their own events but server must validate (Cloud Functions) for authoritative marking
-    match /lpEvents/{userId}/{eventId} {
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow read: if isSignedIn() && request.auth.uid == userId;
-      allow update, delete: if isAdmin();
-    }
-
-    // adEvents and aerEvents: client may write provisional records but server must validate
-    match /adEvents/{userId}/{eventId} {
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow read: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isAdmin() || request.auth.token.firebase.sign_in_provider == 'admin';
-      allow delete: if isAdmin();
-    }
-
-    match /aerEvents/{userId}/{eventId} {
-      allow read: if isSignedIn() && request.auth.uid == userId;
-      allow create: if false; // only server should create AER records after validation
-      allow update, delete: if isAdmin();
-    }
-
-    // Withdrawals: users can create requests; finance ops/admins can change status
-    match /withdrawals/{userId}/{withdrawId} {
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow read: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isFinance() || isAdmin();
-      allow delete: if false;
-    }
-
-    // Config: admins only
-    match /config/{doc} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
-
-    // Audit logs: only admins and security analysts
-    match /auditLogs/{logId} {
-      allow read: if isAdmin() || isSecurityAnalyst();
-      allow create: if false;
-      allow update, delete: if false;
-    }
-
-    // Helpers
-    function isSignedIn() {
+    
+    // Helper functions
+    function isAuthenticated() {
       return request.auth != null;
     }
-
+    
+    function getUserId() {
+      return request.auth.uid;
+    }
+    
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(getUserId())).data.role;
+    }
+    
     function hasRole(role) {
-      return request.auth != null && request.auth.token.role == role;
+      return getUserRole() == role;
     }
-
+    
+    function hasAnyRole(roles) {
+      return getUserRole() in roles;
+    }
+    
     function isAdmin() {
-      return hasRole('admin') || hasRole('superadmin');
+      return hasAnyRole(['admin', 'superadmin']);
     }
-
+    
+    function isModerator() {
+      return hasAnyRole(['moderator', 'admin', 'superadmin']);
+    }
+    
+    function isCompliance() {
+      return hasAnyRole(['compliance', 'admin', 'superadmin']);
+    }
+    
+    function isSecurity() {
+      return hasAnyRole(['security', 'admin', 'superadmin']);
+    }
+    
     function isFinance() {
-      return hasRole('finance') || hasRole('superadmin');
+      return hasAnyRole(['finance', 'admin', 'superadmin']);
     }
-
-    function isSecurityAnalyst() {
-      return hasRole('security') || hasRole('superadmin');
+    
+    function isOwnerOrAdmin(userId) {
+      return getUserId() == userId || isAdmin();
+    }
+    
+    function validateUserData(data) {
+      return data.keys().hasAll(['uid', 'role', 'status', 'ageGroup', 'verificationStatus']) &&
+             data.uid == getUserId() &&
+             data.role in ['user', 'moderator', 'finance', 'admin', 'superadmin', 'compliance', 'security'] &&
+             data.status in ['active', 'deactivated', 'suspended', 'pending_verification'] &&
+             data.ageGroup in ['under13', 'thirteen_to_seventeen', 'eighteen_plus'] &&
+             data.verificationStatus in ['none', 'email', 'phone', 'document', 'full'];
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if isOwnerOrAdmin(userId);
+      
+      // Users can create their own profile during signup
+      allow create: if isAuthenticated() && 
+                      getUserId() == userId && 
+                      validateUserData(request.resource.data) &&
+                      request.resource.data.role == 'user';
+      
+      // Users can update their own profile (limited fields)
+      allow update: if isAuthenticated() && 
+                      getUserId() == userId &&
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['displayName', 'photoUrl', 'updatedAt', 'lastLoginAt']);
+      
+      // Admin updates
+      allow update: if isAdmin() && validateUserData(request.resource.data);
+      
+      // Only superadmin can delete users
+      allow delete: if hasRole('superadmin');
+    }
+    
+    // Activities collection
+    match /activities/{activityId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isModerator();
+    }
+    
+    // User activities collection
+    match /user_activities/{userActivityId} {
+      allow read, write: if isAuthenticated() && 
+                           resource.data.userId == getUserId();
+      allow read, write: if isModerator();
+    }
+    
+    // LP Events collection (server-only writes)
+    match /lp_events/{eventId} {
+      allow read: if isAuthenticated() && 
+                    (resource.data.userId == getUserId() || isModerator());
+      allow write: if false; // Server-only via Cloud Functions
+    }
+    
+    // Ad Events collection (server-only writes)
+    match /ad_events/{eventId} {
+      allow read: if isAuthenticated() && 
+                    (resource.data.userId == getUserId() || isModerator());
+      allow write: if false; // Server-only via Cloud Functions
+    }
+    
+    // AER Events collection (server-only writes)
+    match /aer_events/{eventId} {
+      allow read: if isAuthenticated() && 
+                    (resource.data.userId == getUserId() || isModerator());
+      allow write: if false; // Server-only via Cloud Functions
+    }
+    
+    // Security Events collection
+    match /security_events/{eventId} {
+      allow read: if isSecurity() || 
+                    (isAuthenticated() && resource.data.userId == getUserId());
+      allow create: if isAuthenticated(); // Auto-generated by system
+      allow update: if isSecurity();
+      allow delete: if hasRole('superadmin');
+    }
+    
+    // Audit Logs collection
+    match /audit_logs/{logId} {
+      allow read: if isCompliance() || 
+                    (isAuthenticated() && resource.data.userId == getUserId());
+      allow create: if isAuthenticated(); // Auto-generated by system
+      allow update, delete: if false; // Immutable
+    }
+    
+    // App Configs collection
+    match /app_configs/{configId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    
+    // Age Verifications collection
+    match /age_verifications/{verificationId} {
+      allow read: if isCompliance() || 
+                    (isAuthenticated() && resource.data.userId == getUserId());
+      allow create: if isAuthenticated() && 
+                      request.resource.data.userId == getUserId();
+      allow update: if isCompliance();
+      allow delete: if hasRole('superadmin');
+    }
+    
+    // Withdrawals collection (server-only writes)
+    match /withdrawals/{withdrawalId} {
+      allow read: if isFinance() || 
+                    (isAuthenticated() && resource.data.userId == getUserId());
+      allow write: if false; // Server-only via Cloud Functions
+    }
+    
+    // Referrals collection
+    match /referrals/{referralId} {
+      allow read: if isAuthenticated() && 
+                    (resource.data.referrerId == getUserId() || 
+                     resource.data.refereeId == getUserId() || 
+                     isModerator());
+      allow create: if isAuthenticated() && 
+                      request.resource.data.referrerId == getUserId();
+      allow update: if isModerator();
+      allow delete: if isAdmin();
+    }
+    
+    // Notifications collection
+    match /notifications/{notificationId} {
+      allow read, update: if isAuthenticated() && 
+                            resource.data.userId == getUserId();
+      allow create: if isModerator();
+      allow delete: if isAuthenticated() && 
+                      resource.data.userId == getUserId();
+    }
+    
+    // System Stats collection (read-only for users)
+    match /system_stats/{statId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Server-only via Cloud Functions
+    }
+    
+    // Reports collection
+    match /reports/{reportId} {
+      allow read: if isModerator();
+      allow create: if isAuthenticated();
+      allow update: if isModerator();
+      allow delete: if isAdmin();
     }
   }
 }

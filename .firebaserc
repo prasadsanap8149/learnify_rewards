@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "learnify-rewards"
+  },
+  "targets": {
+    "learnify-rewards": {
+      "hosting": {
+        "production": [
+          "learnify-rewards"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
