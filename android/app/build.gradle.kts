@@ -30,7 +30,7 @@ android {
         // Unique Application ID for Google Play Store
         applicationId = "com.prasadSanap.learnify_rewards.app"
         // Minimum SDK for modern Android features
-        minSdk = 21
+        minSdk = 23
         targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName

@@ -23,6 +23,25 @@
           "other_platform_oauth_client": []
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1023882613662:android:531ea5a4f9b54bc0c5bc8f",
+        "android_client_info": {
+          "package_name": "com.prasadSanap.learnify_rewards.app.debug"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB4X_vWefMxB6EceXDVCjdWW7YcBILDPL0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
     }
   ],
   "configuration_version": "1"
