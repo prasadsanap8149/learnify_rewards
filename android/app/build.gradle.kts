@@ -22,6 +22,10 @@ android {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         // Unique Application ID for Google Play Store
         applicationId = "com.learnifyrewards.app"
