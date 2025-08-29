@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../data/enums.dart';
 
 class WithdrawalRequest {
   final String id;
@@ -196,6 +197,9 @@ class WithdrawalRequest {
         return 'Cryptocurrency';
       case WithdrawalMethod.giftCard:
         return 'Gift Card';
+      case WithdrawalMethod.check:
+        // TODO: Handle this case.
+        throw UnimplementedError();
     }
   }
 
@@ -282,6 +286,9 @@ class WithdrawalRequest {
       case WithdrawalMethod.giftCard:
         // Gift cards don't have sensitive details to mask
         break;
+      case WithdrawalMethod.check:
+        // TODO: Handle this case.
+        throw UnimplementedError();
     }
 
     return masked;
@@ -316,24 +323,4 @@ class WithdrawalRequest {
 
   @override
   int get hashCode => id.hashCode;
-}
-
-/// Withdrawal methods
-enum WithdrawalMethod {
-  paypal, // PayPal transfer
-  bankTransfer, // Bank account transfer
-  cryptocurrency, // Cryptocurrency payment
-  giftCard, // Gift card redemption
-}
-
-/// Withdrawal status
-enum WithdrawalStatus {
-  pending, // Initial status
-  pendingReview, // Requires manual review
-  approved, // Approved by admin
-  processing, // Being processed
-  completed, // Successfully completed
-  failed, // Processing failed
-  rejected, // Rejected by admin
-  cancelled, // Cancelled by user or system
 }

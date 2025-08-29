@@ -44,3 +44,23 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 /android/app/google-services.json
+
+# Environment Configuration Files (SECURITY)
+.env
+.env.local
+.env.development
+.env.staging
+.env.production
+.env.*.local
+
+# Firebase Configuration (Sensitive)
+/ios/firebase_app_id_file.json
+/ios/GoogleService-Info.plist
+/android/app/google-services.json
+/lib/firebase_options.dart
+
+# Encryption Keys and Certificates
+*.p12
+*.jks
+*.keystore
+key.properties

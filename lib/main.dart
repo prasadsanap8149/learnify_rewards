@@ -10,32 +10,56 @@ import 'package:go_router/go_router.dart';
 
 // Import screens
 import 'screens/main_screens.dart';
+import 'screens/serverless_admin_panel.dart';
+
+// Import serverless configuration (ZERO SERVER COSTS!)
+import 'config/serverless_environment_config.dart';
+import 'services/encryption_service.dart';
+import 'services/serverless_manual_settlement_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize Serverless Environment Configuration (Zero cost!)
+  await ServerlessEnvironmentConfig.instance.initialize();
+  final config = ServerlessEnvironmentConfig.instance;
+
   // Initialize Firebase
   await Firebase.initializeApp();
 
-  // Initialize Firebase Crashlytics for production
-  FlutterError.onError = (errorDetails) {
-    FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
-  };
+  // Initialize Encryption Service (Client-side only - zero server cost!)
+  await EncryptionService().initialize();
 
-  // Initialize Firebase Analytics
-  FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
+  // Initialize Serverless Settlement Service (Zero server cost!)
+  final _ = ServerlessManualSettlementService.instance;
 
-  // Initialize Firebase Performance
-  FirebasePerformance.instance.setPerformanceCollectionEnabled(true);
+  // Initialize Firebase services only if enabled and in production
+  if (!config.isDevelopment) {
+    // Initialize Firebase Crashlytics for production
+    FlutterError.onError = (errorDetails) {
+      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+    };
 
-  // Initialize Google Mobile Ads
+    // Initialize Firebase Analytics (free tier)
+    FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
+
+    // Initialize Firebase Performance (free tier)
+    FirebasePerformance.instance.setPerformanceCollectionEnabled(true);
+  }
+
+  // Initialize Google Mobile Ads with environment-specific configuration
   await MobileAds.instance.initialize();
 
-  runApp(const LearnifyRewardsApp());
+  runApp(LearnifyRewardsApp(config: config));
 }
 
 class LearnifyRewardsApp extends StatefulWidget {
-  const LearnifyRewardsApp({super.key});
+  final ServerlessEnvironmentConfig config;
+
+  const LearnifyRewardsApp({
+    super.key,
+    required this.config,
+  });
 
   @override
   State<LearnifyRewardsApp> createState() => _LearnifyRewardsAppState();
@@ -77,6 +101,10 @@ class _LearnifyRewardsAppState extends State<LearnifyRewardsApp> {
             GoRoute(
               path: 'profile',
               builder: (context, state) => const ProfileScreen(),
+            ),
+            GoRoute(
+              path: 'admin',
+              builder: (context, state) => const ServerlessAdminPanel(),
             ),
           ],
         ),

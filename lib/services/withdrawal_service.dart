@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../shared/models/withdrawal_request.dart';
+import '../shared/data/enums.dart';
 import 'fraud_detection_service.dart';
 
 class WithdrawalService {
@@ -83,10 +84,10 @@ class WithdrawalService {
 
   /// Validate withdrawal request
   Future<void> _validateWithdrawalRequest(
-    String userId,
-    double amount,
-    WithdrawalMethod method,
-  ) async {
+      String userId,
+      double amount,
+      WithdrawalMethod method,
+      ) async {
     // Check amount limits
     if (amount < minWithdrawalAmount) {
       throw Exception(
@@ -200,8 +201,11 @@ class WithdrawalService {
         }
         break;
       case WithdrawalMethod.giftCard:
-        // Gift cards typically don't require verification
+      // Gift cards typically don't require verification
         break;
+      case WithdrawalMethod.check:
+        // TODO: Handle this case.
+        throw UnimplementedError();
     }
   }
 
@@ -230,7 +234,7 @@ class WithdrawalService {
       final accountNumber = sanitized['accountNumber'] as String?;
       if (accountNumber != null && accountNumber.length > 4) {
         sanitized['accountNumber'] =
-            '****${accountNumber.substring(accountNumber.length - 4)}';
+        '****${accountNumber.substring(accountNumber.length - 4)}';
       }
     }
 
@@ -242,7 +246,7 @@ class WithdrawalService {
       final address = sanitized['cryptoAddress'] as String?;
       if (address != null && address.length > 8) {
         sanitized['cryptoAddress'] =
-            '${address.substring(0, 4)}...${address.substring(address.length - 4)}';
+        '${address.substring(0, 4)}...${address.substring(address.length - 4)}';
       }
     }
 
@@ -265,9 +269,9 @@ class WithdrawalService {
 
   /// Log withdrawal attempt
   Future<void> _logWithdrawalAttempt(
-    WithdrawalRequest request,
-    FraudAnalysisResult fraudAnalysis,
-  ) async {
+      WithdrawalRequest request,
+      FraudAnalysisResult fraudAnalysis,
+      ) async {
     try {
       await _firestore.collection('withdrawal_logs').add({
         'requestId': request.id,
@@ -317,6 +321,9 @@ class WithdrawalService {
           return await _processCryptoPayment(request);
         case WithdrawalMethod.giftCard:
           return await _processGiftCardPayment(request);
+        case WithdrawalMethod.check:
+          // TODO: Handle this case.
+          throw UnimplementedError();
       }
     } catch (e) {
       print('Payment processing error: $e');
@@ -371,7 +378,7 @@ class WithdrawalService {
         'status': WithdrawalStatus.completed.toString(),
         'completedAt': FieldValue.serverTimestamp(),
         'transactionId':
-            'TXN_${request.id}_${DateTime.now().millisecondsSinceEpoch}',
+        'TXN_${request.id}_${DateTime.now().millisecondsSinceEpoch}',
         'updatedAt': FieldValue.serverTimestamp(),
       },
     );
@@ -397,7 +404,7 @@ class WithdrawalService {
   /// Fail withdrawal
   Future<void> _failWithdrawal(String requestId, String error) async {
     final requestDoc =
-        await _firestore.collection('withdrawal_requests').doc(requestId).get();
+    await _firestore.collection('withdrawal_requests').doc(requestId).get();
     if (!requestDoc.exists) return;
 
     final request = WithdrawalRequest.fromJson({
@@ -482,9 +489,9 @@ class WithdrawalService {
 
       return snapshot.docs
           .map((doc) => WithdrawalRequest.fromJson({
-                'id': doc.id,
-                ...doc.data(),
-              }))
+        'id': doc.id,
+        ...doc.data(),
+      }))
           .toList();
     } catch (e) {
       throw Exception('Failed to get user withdrawals: $e');
@@ -497,17 +504,17 @@ class WithdrawalService {
       final snapshot = await _firestore
           .collection('withdrawal_requests')
           .where('status', whereIn: [
-            WithdrawalStatus.pending.toString(),
-            WithdrawalStatus.pendingReview.toString(),
-          ])
+        WithdrawalStatus.pending.toString(),
+        WithdrawalStatus.pendingReview.toString(),
+      ])
           .orderBy('requestedAt', descending: false)
           .get();
 
       return snapshot.docs
           .map((doc) => WithdrawalRequest.fromJson({
-                'id': doc.id,
-                ...doc.data(),
-              }))
+        'id': doc.id,
+        ...doc.data(),
+      }))
           .toList();
     } catch (e) {
       throw Exception('Failed to get pending withdrawals: $e');
@@ -596,7 +603,7 @@ class WithdrawalService {
         'type': 'withdrawal',
         'title': 'Withdrawal Rejected',
         'message':
-            'Your withdrawal of \$${request.amount.toStringAsFixed(2)} was rejected. Reason: $reason',
+        'Your withdrawal of \$${request.amount.toStringAsFixed(2)} was rejected. Reason: $reason',
         'data': {
           'requestId': request.id,
           'amount': request.amount,

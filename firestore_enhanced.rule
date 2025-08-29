@@ -1,0 +1,448 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ========================================
+    // ENHANCED HELPER FUNCTIONS
+    // ========================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserId() {
+      return request.auth.uid;
+    }
+    
+    function getUserRole() {
+      return request.auth.token.role != null ? request.auth.token.role : 'user';
+    }
+    
+    function getAgeGroup() {
+      return request.auth.token.ageGroup != null ? request.auth.token.ageGroup : 'eighteen_plus';
+    }
+    
+    function getVerificationLevel() {
+      return request.auth.token.verificationLevel != null ? request.auth.token.verificationLevel : 'none';
+    }
+    
+    function hasRole(role) {
+      return getUserRole() == role;
+    }
+    
+    function hasAnyRole(roles) {
+      return getUserRole() in roles;
+    }
+    
+    function isAdmin() {
+      return hasAnyRole(['admin', 'superadmin']);
+    }
+    
+    function isModerator() {
+      return hasAnyRole(['moderator', 'admin', 'superadmin']);
+    }
+    
+    function isCompliance() {
+      return hasAnyRole(['compliance', 'admin', 'superadmin']);
+    }
+    
+    function isSecurity() {
+      return hasAnyRole(['security', 'admin', 'superadmin']);
+    }
+    
+    function isFinance() {
+      return hasAnyRole(['finance', 'admin', 'superadmin']);
+    }
+    
+    function isOwnerOrAdmin(userId) {
+      return getUserId() == userId || isAdmin();
+    }
+    
+    // Age group validation functions
+    function isAdult() {
+      return getAgeGroup() == 'eighteen_plus';
+    }
+    
+    function isMinor() {
+      return getAgeGroup() in ['under13', 'thirteen_to_seventeen'];
+    }
+    
+    function isUnder13() {
+      return getAgeGroup() == 'under13';
+    }
+    
+    function canEarnAER() {
+      return isAuthenticated() && !isUnder13();
+    }
+    
+    function hasParentalConsent() {
+      return request.auth.token.parentalConsent == true;
+    }
+    
+    // Verification level checks
+    function isVerified(level) {
+      let levels = ['none', 'email', 'phone', 'document', 'full'];
+      let currentLevel = levels.indexOf(getVerificationLevel());
+      let requiredLevel = levels.indexOf(level);
+      return currentLevel >= requiredLevel;
+    }
+    
+    function canWithdraw() {
+      return isAuthenticated() && 
+             isVerified('email') && 
+             (isAdult() || hasParentalConsent());
+    }
+    
+    // Time-based validation
+    function isRecentTimestamp(timestamp) {
+      return timestamp > request.time - duration.value(1, 'h');
+    }
+    
+    function isValidTimestamp(timestamp) {
+      return timestamp <= request.time && 
+             timestamp > request.time - duration.value(24, 'h');
+    }
+    
+    // ========================================
+    // ENHANCED VALIDATION FUNCTIONS
+    // ========================================
+    
+    function validateUserData(data) {
+      return data.keys().hasAll(['uid', 'role', 'status', 'ageGroup', 'verificationStatus']) &&
+             data.uid == getUserId() &&
+             data.role in ['user', 'moderator', 'finance', 'admin', 'superadmin', 'compliance', 'security'] &&
+             data.status in ['active', 'deactivated', 'suspended', 'pending_verification'] &&
+             data.ageGroup in ['under13', 'thirteen_to_seventeen', 'eighteen_plus'] &&
+             data.verificationStatus in ['none', 'email', 'phone', 'document', 'full'] &&
+             // Validate timestamps
+             (data.createdAt == null || data.createdAt <= request.time) &&
+             (data.updatedAt == null || isValidTimestamp(data.updatedAt));
+    }
+    
+    function validateUserUpdate(oldData, newData) {
+      // Critical fields that only admins can change
+      let adminOnlyFields = ['role', 'status', 'verificationStatus', 'ageGroup'];
+      let changedAdminFields = newData.diff(oldData).affectedKeys().hasAny(adminOnlyFields);
+      
+      // User can only update specific fields
+      let userEditableFields = ['displayName', 'photoUrl', 'updatedAt', 'lastLoginAt', 'profileEnc'];
+      let userChangedFields = newData.diff(oldData).affectedKeys().hasOnly(userEditableFields);
+      
+      return (isAdmin() && validateUserData(newData)) || 
+             (getUserId() == oldData.uid && userChangedFields && !changedAdminFields);
+    }
+    
+    function validateLPEvent(data) {
+      return data.keys().hasAll(['userId', 'type', 'amount', 'source', 'timestamp']) &&
+             data.userId == getUserId() &&
+             data.type in ['earned', 'spent', 'bonus', 'penalty'] &&
+             data.amount is number && data.amount >= 0 &&
+             data.source is string && data.source.size() > 0 &&
+             isValidTimestamp(data.timestamp);
+    }
+    
+    function validateWithdrawalRequest(data) {
+      return data.keys().hasAll(['userId', 'amount', 'method', 'status', 'requestedAt']) &&
+             data.userId == getUserId() &&
+             data.amount is number && data.amount >= 5.00 && data.amount <= 1000.00 &&
+             data.method in ['paypal', 'bank_transfer', 'cryptocurrency', 'gift_card'] &&
+             data.status == 'pending' &&
+             isValidTimestamp(data.requestedAt) &&
+             // Age and verification checks
+             canWithdraw();
+    }
+    
+    function validateAdEvent(data) {
+      return data.keys().hasAll(['userId', 'adFormat', 'engagementTime', 'timestamp']) &&
+             data.userId == getUserId() &&
+             data.adFormat in ['banner', 'interstitial', 'rewarded', 'rewarded_interstitial'] &&
+             data.engagementTime is number && data.engagementTime >= 0 &&
+             isValidTimestamp(data.timestamp) &&
+             // Under-13 users can only see specific ad formats
+             (!isUnder13() || data.adFormat in ['banner']);
+    }
+    
+    function validateAEREvent(data) {
+      return data.keys().hasAll(['userId', 'eventType', 'amount', 'timestamp']) &&
+             data.userId == getUserId() &&
+             data.eventType in ['ad_engagement', 'activity_completion', 'referral'] &&
+             data.amount is number && data.amount >= 0 && data.amount <= 0.05 &&
+             isValidTimestamp(data.timestamp) &&
+             // Under-13 users cannot earn AER
+             canEarnAER();
+    }
+    
+    function validateAgeVerification(data) {
+      return data.keys().hasAll(['userId', 'method', 'status', 'verifiedAgeGroup', 'createdAt']) &&
+             data.userId == getUserId() &&
+             data.method in ['self_reported', 'parental_confirmation', 'document_verification'] &&
+             data.status in ['pending', 'verified', 'rejected', 'expired'] &&
+             data.verifiedAgeGroup in ['under13', 'thirteen_to_seventeen', 'eighteen_plus'] &&
+             isValidTimestamp(data.createdAt);
+    }
+    
+    // ========================================
+    // ENHANCED COLLECTION RULES
+    // ========================================
+    
+    // Users collection with enhanced security
+    match /users/{userId} {
+      allow read: if isOwnerOrAdmin(userId) ||
+                    (isModerator() && resource.data.status != 'suspended');
+      
+      allow create: if isAuthenticated() && 
+                      getUserId() == userId && 
+                      validateUserData(request.resource.data) &&
+                      request.resource.data.role == 'user' &&
+                      // Ensure proper age verification for minors
+                      (request.resource.data.ageGroup == 'eighteen_plus' || 
+                       exists(/databases/$(database)/documents/age_verifications/$(userId)));
+      
+      allow update: if validateUserUpdate(resource.data, request.resource.data);
+      
+      allow delete: if hasRole('superadmin') && 
+                      request.auth.token.dataRetentionCompliant == true;
+    }
+    
+    // Enhanced Activities collection with age-appropriate content
+    match /activities/{activityId} {
+      allow read: if isAuthenticated() && 
+                    (resource.data.ageGroup == 'all' || 
+                     resource.data.ageGroup == getAgeGroup() ||
+                     isAdult() ||
+                     isModerator());
+      
+      allow create: if isModerator() && 
+                      request.resource.data.keys().hasAll(['title', 'type', 'ageGroup', 'difficulty']) &&
+                      request.resource.data.ageGroup in ['under13', 'thirteen_to_seventeen', 'eighteen_plus', 'all'];
+      
+      allow update: if isModerator() && 
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['title', 'description', 'difficulty', 'content', 'updatedAt']);
+      
+      allow delete: if isAdmin();
+    }
+    
+    // Enhanced User activities with security validation
+    match /user_activities/{userActivityId} {
+      allow read: if isAuthenticated() && 
+                    (resource.data.userId == getUserId() || isModerator());
+      
+      allow create: if isAuthenticated() && 
+                      request.resource.data.userId == getUserId() &&
+                      request.resource.data.keys().hasAll(['userId', 'activityId', 'startedAt']) &&
+                      isValidTimestamp(request.resource.data.startedAt);
+      
+      allow update: if isAuthenticated() && 
+                      resource.data.userId == getUserId() &&
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['completedAt', 'correct', 'timeSpent', 'score', 'updatedAt']);
+      
+      allow delete: if isModerator();
+    }
+    
+    // LP Events collection (server-only writes) with enhanced validation
+    match /lp_events/{eventId} {
+      allow read: if isAuthenticated() && 
+                    (resource.data.userId == getUserId() || isModerator()) &&
+                    // Hide sensitive events for minors
+                    (!isUnder13() || resource.data.type != 'aer_earning');
+      
+      allow write: if false; // Server-only via Cloud Functions
+    }
+    
+    // Enhanced Ad Events collection with COPPA compliance
+    match /ad_events/{eventId} {
+      allow read: if isAuthenticated() && 
+                    (resource.data.userId == getUserId() || isModerator());
+      
+      allow create: if validateAdEvent(request.resource.data);
+      
+      allow update: if isSecurity() && 
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['serverValidated', 'qualifiesForAER', 'aerAmount']);
+      
+      allow delete: if isAdmin();
+    }
+    
+    // Enhanced AER Events collection with strict validation
+    match /aer_events/{eventId} {
+      allow read: if isAuthenticated() && 
+                    (resource.data.userId == getUserId() || isModerator()) &&
+                    canEarnAER();
+      
+      allow create: if validateAEREvent(request.resource.data);
+      
+      allow update: if isSecurity() && 
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['validated', 'fraudScore', 'approved']);
+      
+      allow delete: if isAdmin();
+    }
+    
+    // Enhanced Withdrawal Requests collection
+    match /withdrawal_requests/{requestId} {
+      allow read: if isAuthenticated() && 
+                    (resource.data.userId == getUserId() || isFinance());
+      
+      allow create: if validateWithdrawalRequest(request.resource.data);
+      
+      // Only finance and admin can update withdrawal status
+      allow update: if isFinance() && 
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasAny(['status', 'approvedBy', 'rejectedBy', 'rejectionReason', 
+                               'approvedAt', 'rejectedAt', 'completedAt', 'updatedAt']);
+      
+      allow delete: if hasRole('superadmin');
+    }
+    
+    // Enhanced Security Events collection
+    match /security_events/{eventId} {
+      allow read: if isSecurity() || 
+                    (isAuthenticated() && resource.data.userId == getUserId() &&
+                     resource.data.severity in ['low', 'medium']);
+      
+      allow create: if isAuthenticated() && 
+                      request.resource.data.keys().hasAll(['userId', 'eventType', 'severity', 'timestamp']) &&
+                      (request.resource.data.userId == getUserId() || isSecurity()) &&
+                      isValidTimestamp(request.resource.data.timestamp);
+      
+      allow update: if isSecurity();
+      allow delete: if hasRole('superadmin');
+    }
+    
+    // Enhanced Audit Logs collection (immutable)
+    match /audit_logs/{logId} {
+      allow read: if isCompliance() || 
+                    (isAuthenticated() && resource.data.userId == getUserId());
+      
+      allow create: if isAuthenticated() && 
+                      request.resource.data.keys().hasAll(['userId', 'action', 'entity', 'timestamp']) &&
+                      isValidTimestamp(request.resource.data.timestamp);
+      
+      allow update, delete: if false; // Immutable
+    }
+    
+    // Enhanced Age Verifications collection with compliance checks
+    match /age_verifications/{verificationId} {
+      allow read: if isCompliance() || 
+                    (isAuthenticated() && resource.data.userId == getUserId());
+      
+      allow create: if isAuthenticated() && 
+                      validateAgeVerification(request.resource.data);
+      
+      allow update: if isCompliance() && 
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['status', 'verifiedBy', 'verifiedAt', 'rejectionReason', 'updatedAt']);
+      
+      allow delete: if hasRole('superadmin') && 
+                      request.auth.token.dataRetentionCompliant == true;
+    }
+    
+    // Enhanced App Configs collection with role-based access
+    match /app_configs/{configId} {
+      allow read: if isAuthenticated() && 
+                    (configId != 'security' || isSecurity()) &&
+                    (configId != 'finance' || isFinance());
+      
+      allow write: if (hasRole('finance') && configId == 'global') ||
+                     (hasRole('security') && configId == 'security') ||
+                     isAdmin();
+    }
+    
+    // Enhanced Compliance Requests collection
+    match /compliance_requests/{requestId} {
+      allow read: if isCompliance() || 
+                    (isAuthenticated() && resource.data.userId == getUserId());
+      
+      allow create: if isAuthenticated() && 
+                      request.resource.data.keys().hasAll(['userId', 'type', 'requestDetails', 'createdAt']) &&
+                      request.resource.data.userId == getUserId() &&
+                      request.resource.data.type in ['data_export', 'data_deletion', 'account_verification', 'parental_request'];
+      
+      allow update: if isCompliance();
+      allow delete: if hasRole('superadmin');
+    }
+    
+    // Enhanced Referrals collection with fraud prevention
+    match /referrals/{referralId} {
+      allow read: if isAuthenticated() && 
+                    (resource.data.referrerId == getUserId() || 
+                     resource.data.refereeId == getUserId() || 
+                     isModerator());
+      
+      allow create: if isAuthenticated() && 
+                      request.resource.data.referrerId == getUserId() &&
+                      request.resource.data.keys().hasAll(['referrerId', 'refereeId', 'createdAt']) &&
+                      isValidTimestamp(request.resource.data.createdAt);
+      
+      allow update: if isModerator() && 
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['status', 'rewardPaid', 'updatedAt']);
+      
+      allow delete: if isAdmin();
+    }
+    
+    // Enhanced Notifications collection
+    match /notifications/{notificationId} {
+      allow read, update: if isAuthenticated() && 
+                            resource.data.userId == getUserId();
+      
+      allow create: if isModerator() && 
+                      request.resource.data.keys().hasAll(['userId', 'title', 'message', 'type', 'createdAt']);
+      
+      allow delete: if isAuthenticated() && 
+                      (resource.data.userId == getUserId() || isModerator());
+    }
+    
+    // System Stats collection (read-only for users)
+    match /system_stats/{statId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Server-only via Cloud Functions
+    }
+    
+    // Enhanced Reports collection
+    match /reports/{reportId} {
+      allow read: if isModerator() || 
+                    (isAuthenticated() && resource.data.reportedBy == getUserId());
+      
+      allow create: if isAuthenticated() && 
+                      request.resource.data.keys().hasAll(['reportedBy', 'type', 'targetId', 'reason', 'createdAt']) &&
+                      request.resource.data.reportedBy == getUserId();
+      
+      allow update: if isModerator() && 
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['status', 'reviewedBy', 'reviewedAt', 'resolution', 'updatedAt']);
+      
+      allow delete: if isAdmin();
+    }
+    
+    // ========================================
+    // NEW ENHANCED COLLECTIONS
+    // ========================================
+    
+    // Device Fingerprints collection for fraud detection
+    match /device_fingerprints/{deviceId} {
+      allow read: if isSecurity() || 
+                    (isAuthenticated() && resource.data.userId == getUserId());
+      
+      allow create: if isAuthenticated() && 
+                      request.resource.data.userId == getUserId();
+      
+      allow update: if isSecurity();
+      allow delete: if hasRole('superadmin');
+    }
+    
+    // Session Tokens collection for enhanced security
+    match /session_tokens/{tokenId} {
+      allow read: if isAuthenticated() && resource.data.userId == getUserId();
+      allow write: if false; // Server-only via Cloud Functions
+    }
+    
+    // Rate Limiting collection
+    match /rate_limits/{userId} {
+      allow read: if getUserId() == userId || isSecurity();
+      allow write: if false; // Server-only via Cloud Functions
+    }
+  }
+}

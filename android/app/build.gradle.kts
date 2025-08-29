@@ -103,7 +103,7 @@ flutter {
 dependencies {
     // Firebase BOM - manages all Firebase library versions
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
-
+    
     // Firebase Core - required for all Firebase services
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
