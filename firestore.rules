@@ -51,8 +51,8 @@ service cloud.firestore {
       return data.keys().hasAll(['uid', 'role', 'status', 'ageGroup', 'verificationStatus']) &&
              data.uid == getUserId() &&
              data.role in ['user', 'moderator', 'finance', 'admin', 'superadmin', 'compliance', 'security'] &&
-             data.status in ['active', 'deactivated', 'suspended', 'pending_verification'] &&
-             data.ageGroup in ['under13', 'thirteen_to_seventeen', 'eighteen_plus'] &&
+             data.status in ['active', 'deactivated', 'suspended', 'pendingVerification'] &&
+             data.ageGroup in ['under13', 'thirteenToSeventeen', 'eighteenPlus'] &&
              data.verificationStatus in ['none', 'email', 'phone', 'document', 'full'];
     }
     

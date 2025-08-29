@@ -473,14 +473,6 @@ class EnhancedWithdrawalService {
     }
   }
 
-  /// Check if withdrawal can be settled
-  bool _canBeSettled(WithdrawalRequest request) {
-    return [
-      WithdrawalStatus.pendingSettlement,
-      WithdrawalStatus.approved,
-    ].contains(request.status);
-  }
-
   /// Validate withdrawal request with enhanced security
   Future<void> _validateWithdrawalRequest(
       String userId,
@@ -604,8 +596,11 @@ class EnhancedWithdrawalService {
       // Gift cards typically don't require verification
         break;
       case WithdrawalMethod.check:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        if (verifications['bankAccount'] != true) {
+          throw Exception(
+              'Bank account verification required for check withdrawals');
+        }
+        break;
     }
   }
 
@@ -712,17 +707,4 @@ extension WithdrawalSettlement on WithdrawalRequest {
       WithdrawalStatus.cancelled,
     ].contains(status);
   }
-}
-
-/// New withdrawal status for manual settlement workflow
-enum WithdrawalStatus {
-  pending,
-  pendingReview,
-  pendingSettlement, // New status for manual settlement
-  approved,
-  processing,
-  completed,
-  failed,
-  rejected,
-  cancelled,
 }

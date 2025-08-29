@@ -24,7 +24,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       email: 'test@example.com',
       role: UserRole.user,
       status: UserStatus.active,
-      ageGroup: AgeGroup.eighteen_plus,
+      ageGroup: AgeGroup.eighteenPlus,
       verificationStatus: VerificationStatus.full,
     ));
     _user = _userRepository.getUser('user1');

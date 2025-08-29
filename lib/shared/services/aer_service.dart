@@ -19,8 +19,8 @@ class AERService {
   // Base AER rates (in cents)
   static const Map<AgeGroup, double> _baseRates = {
     AgeGroup.under13: 0.5,
-    AgeGroup.thirteen_to_seventeen: 1.0,
-    AgeGroup.eighteen_plus: 1.5,
+    AgeGroup.thirteenToSeventeen: 1.0,
+    AgeGroup.eighteenPlus: 1.5,
   };
 
   // Minimum engagement time for AER qualification (in seconds)
@@ -29,8 +29,8 @@ class AERService {
   // Daily AER limits by age group (in cents)
   static const Map<AgeGroup, double> _dailyLimits = {
     AgeGroup.under13: 50.0, // $0.50 per day
-    AgeGroup.thirteen_to_seventeen: 100.0, // $1.00 per day
-    AgeGroup.eighteen_plus: 200.0, // $2.00 per day
+    AgeGroup.thirteenToSeventeen: 100.0, // $1.00 per day
+    AgeGroup.eighteenPlus: 200.0, // $2.00 per day
   };
 
   // Calculate AER for an ad engagement

@@ -228,7 +228,7 @@ class EnhancedAdService {
         final userData = {
           'uid': user.uid,
           'ageGroup':
-              'eighteen_plus', // Default, should be fetched from user service
+              'eighteenPlus', // Default, should be fetched from user service
         };
 
         // This is a simplified approach - in production you'd use proper user entity
@@ -381,12 +381,12 @@ class EnhancedAdService {
       final ageGroup = userData['ageGroup'] as String?;
 
       // Check age restrictions for different ad types
-      if (ageGroup == 'under_13') {
+      if (ageGroup == 'under13') {
         // COPPA compliance - no targeted ads for under 13
         return false;
       }
 
-      if (ageGroup == 'thirteen_to_seventeen') {
+      if (ageGroup == 'thirteenToSeventeen') {
         // Check parental consent for 13-17 age group
         final consentData =
             userData['parentalConsent'] as Map<String, dynamic>?;
@@ -413,7 +413,7 @@ class EnhancedAdService {
       }
 
       // For 18+ users, check basic consent preferences
-      if (ageGroup == 'eighteen_plus') {
+      if (ageGroup == 'eighteenPlus') {
         final preferences = userData['preferences'] as Map<String, dynamic>?;
         final adsEnabled = preferences?['adsEnabled'] as bool? ?? true;
         if (!adsEnabled) return false;
@@ -446,12 +446,12 @@ class EnhancedAdService {
     switch (ageGroup) {
       case 'under13':
         return [AdFormat.banner]; // Only banners for under 13
-      case 'thirteen_to_seventeen':
+      case 'thirteenToSeventeen':
         return [
           AdFormat.banner,
           AdFormat.interstitial
         ]; // No rewarded for minors
-      case 'eighteen_plus':
+      case 'eighteenPlus':
         return AdFormat.values; // All formats for adults
       default:
         return [AdFormat.banner]; // Conservative default

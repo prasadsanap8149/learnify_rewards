@@ -25,7 +25,7 @@ function getUserRole() {
 function getAgeGroup() {
   return request.auth.token.ageGroup != null
     ? request.auth.token.ageGroup
-    : "eighteen_plus";
+    : "eighteenPlus";
 }
 ```
 
@@ -56,7 +56,7 @@ function getAgeGroup() {
    // In Cloud Functions - set custom claims on user creation
    await admin.auth().setCustomUserClaims(userId, {
      role: "user",
-     ageGroup: "eighteen_plus",
+     ageGroup: "eighteenPlus",
      verificationLevel: "email",
    });
    ```

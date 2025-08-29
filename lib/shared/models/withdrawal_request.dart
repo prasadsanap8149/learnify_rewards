@@ -171,6 +171,8 @@ class WithdrawalRequest {
         return 'Pending';
       case WithdrawalStatus.pendingReview:
         return 'Pending Review';
+      case WithdrawalStatus.pendingSettlement:
+        return 'Pending Settlement';
       case WithdrawalStatus.approved:
         return 'Approved';
       case WithdrawalStatus.processing:
@@ -198,8 +200,7 @@ class WithdrawalRequest {
       case WithdrawalMethod.giftCard:
         return 'Gift Card';
       case WithdrawalMethod.check:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return 'Check';
     }
   }
 
@@ -210,6 +211,7 @@ class WithdrawalRequest {
   bool get isPending =>
       status == WithdrawalStatus.pending ||
       status == WithdrawalStatus.pendingReview ||
+      status == WithdrawalStatus.pendingSettlement ||
       status == WithdrawalStatus.approved ||
       status == WithdrawalStatus.processing;
 
@@ -287,8 +289,17 @@ class WithdrawalRequest {
         // Gift cards don't have sensitive details to mask
         break;
       case WithdrawalMethod.check:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        if (masked.containsKey('routingNumber')) {
+          masked['routingNumber'] = '****';
+        }
+        if (masked.containsKey('accountNumber')) {
+          final accountNumber = masked['accountNumber'] as String;
+          if (accountNumber.length > 4) {
+            masked['accountNumber'] =
+                '****${accountNumber.substring(accountNumber.length - 4)}';
+          }
+        }
+        break;
     }
 
     return masked;

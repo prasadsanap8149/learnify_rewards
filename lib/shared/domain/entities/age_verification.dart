@@ -127,7 +127,7 @@ class AgeVerification {
   AgeGroup get currentAgeGroup {
     final age = currentAge;
     if (age < 13) return AgeGroup.under13;
-    if (age >= 13 && age <= 17) return AgeGroup.thirteen_to_seventeen;
-    return AgeGroup.eighteen_plus;
+    if (age >= 13 && age <= 17) return AgeGroup.thirteenToSeventeen;
+    return AgeGroup.eighteenPlus;
   }
 }

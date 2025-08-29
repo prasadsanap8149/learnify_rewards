@@ -15,11 +15,11 @@ class ConfigService {
   static const Map<String, dynamic> _defaults = {
     // AER Configuration
     'aer.base_rate.under13': 0.5,
-    'aer.base_rate.thirteen_to_seventeen': 1.0,
-    'aer.base_rate.eighteen_plus': 1.5,
+    'aer.base_rate.thirteenToSeventeen': 1.0,
+    'aer.base_rate.eighteenPlus': 1.5,
     'aer.daily_limit.under13': 50.0,
-    'aer.daily_limit.thirteen_to_seventeen': 100.0,
-    'aer.daily_limit.eighteen_plus': 200.0,
+    'aer.daily_limit.thirteenToSeventeen': 100.0,
+    'aer.daily_limit.eighteenPlus': 200.0,
     'aer.min_engagement_time': 30,
 
     // Security Configuration
@@ -265,13 +265,13 @@ class ConfigService {
     try {
       switch (key) {
         case 'aer.base_rate.under13':
-        case 'aer.base_rate.thirteen_to_seventeen':
-        case 'aer.base_rate.eighteen_plus':
+        case 'aer.base_rate.thirteenToSeventeen':
+        case 'aer.base_rate.eighteenPlus':
           return value is double && value >= 0.0 && value <= 10.0;
 
         case 'aer.daily_limit.under13':
-        case 'aer.daily_limit.thirteen_to_seventeen':
-        case 'aer.daily_limit.eighteen_plus':
+        case 'aer.daily_limit.thirteenToSeventeen':
+        case 'aer.daily_limit.eighteenPlus':
           return value is double && value >= 0.0 && value <= 1000.0;
 
         case 'aer.min_engagement_time':

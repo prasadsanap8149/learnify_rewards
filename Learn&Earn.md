@@ -4,36 +4,36 @@ Awesome brief. Here's a complete, end-to-end development plan you can hand to en
 
 # Product vision & guardrails
 
-**Goal:** A "learn & earn" app where users practice bite-sized skills (math/word/puzzles). Ads help fund the experience. Users see *transparent, day-wise earnings estimates* and can withdraw monthly above a threshold.
+**Goal:** A "learn & earn" app where users practice bite-sized skills (math/word/puzzles). Ads help fund the experience. Users see _transparent, day-wise earnings estimates_ and can withdraw monthly above a threshold.
 
 **Critical guardrails (must-haves to pass stores & avoid account risk):**
 
-* **Do not compensate users with real-world money *for viewing or clicking ads*.** Google considers incentivized ad traffic a policy violation. "Rewarded" formats are allowed only for *in-app* benefits, not cash equivalents. Plan your earnings model so cash payouts are **not** tied to ad views or impressions (details below). ([Google Help][1])
-* If your **target audience includes children**, you must comply with **Google Play Families** (age gating, Families-certified ad SDKs, limited formats, stricter data handling). If you want to keep the product "for all ages," implement a robust **age-screen** with a separate "under-13" experience (no cash, limited ads), or **target 13+** to reduce compliance burden. ([Google Help][2])
-* Follow **Play Developer Program Policies** (User Data, Ads, Deceptive Behavior, Payments) and watch ongoing deadlines. ([Google Help][3])
-* India market: plan for **DPDP Act** (consent, purpose limitation, notices, access/erasure) and watch tax rules if your model crosses into **"online gaming winnings"** territory (TDS 30% under 194BA/115BBJ). We keep your core model outside that zone (no cash for game outcomes or ad views). If you ever move toward cash "winnings," add KYC & tax withholding workflows. ([MeitY][4], [BDO India][5], [Figment][6])
+- **Do not compensate users with real-world money _for viewing or clicking ads_.** Google considers incentivized ad traffic a policy violation. "Rewarded" formats are allowed only for _in-app_ benefits, not cash equivalents. Plan your earnings model so cash payouts are **not** tied to ad views or impressions (details below). ([Google Help][1])
+- If your **target audience includes children**, you must comply with **Google Play Families** (age gating, Families-certified ad SDKs, limited formats, stricter data handling). If you want to keep the product "for all ages," implement a robust **age-screen** with a separate "under-13" experience (no cash, limited ads), or **target 13+** to reduce compliance burden. ([Google Help][2])
+- Follow **Play Developer Program Policies** (User Data, Ads, Deceptive Behavior, Payments) and watch ongoing deadlines. ([Google Help][3])
+- India market: plan for **DPDP Act** (consent, purpose limitation, notices, access/erasure) and watch tax rules if your model crosses into **"online gaming winnings"** territory (TDS 30% under 194BA/115BBJ). We keep your core model outside that zone (no cash for game outcomes or ad views). If you ever move toward cash "winnings," add KYC & tax withholding workflows. ([MeitY][4], [BDO India][5], [Figment][6])
 
 **Additional Compliance Requirements:**
 
-* **COPPA Compliance (US):** Strict parental consent, no targeted ads, limited data collection for under-13 users
-* **GDPR/CCPA:** Explicit consent, data portability, right to deletion, privacy-by-design
-* **Financial Regulations:** Money transmission licensing considerations, anti-money laundering (AML) checks
-* **Accessibility:** WCAG 2.1 AA compliance, screen reader support, keyboard navigation
+- **COPPA Compliance (US):** Strict parental consent, no targeted ads, limited data collection for under-13 users
+- **GDPR/CCPA:** Explicit consent, data portability, right to deletion, privacy-by-design
+- **Financial Regulations:** Money transmission licensing considerations, anti-money laundering (AML) checks
+- **Accessibility:** WCAG 2.1 AA compliance, screen reader support, keyboard navigation
 
 ---
 
 # Tech stack
 
-* **Client:** Flutter (Dart), Gradle build flavors (dev/stage/prod), Android first (iOS later).
-* **Backend:** Firebase Auth, Firestore, Cloud Functions (Node.js 20), Cloud Storage, Cloud Scheduler, Cloud Tasks, Cloud KMS.
-* **Analytics/Crash:** Firebase Analytics, Crashlytics, Performance Monitoring.
-* **Ads:** Google Mobile Ads SDK (banner, interstitial, rewarded, rewarded-interstitial), mediation optional later.
-* **Secrets & Config:** Remote Config + Firestore `/config` docs + build-time `.env` per flavor.
-* **Security:** AES-256 client-side envelope encryption for sensitive fields; Firestore Security Rules v2; App Check; reCAPTCHA/Play Integrity.
-* **Additional Security:** Certificate pinning, code obfuscation, runtime application self-protection (RASP)
-* **Monitoring:** Cloud Monitoring, Error Reporting, Uptime checks, custom metrics dashboards
-* **CDN:** Cloud CDN for static assets, image optimization
-* **Testing:** Firebase Test Lab, automated UI testing, security scanning
+- **Client:** Flutter (Dart), Gradle build flavors (dev/stage/prod), Android first (iOS later).
+- **Backend:** Firebase Auth, Firestore, Cloud Functions (Node.js 20), Cloud Storage, Cloud Scheduler, Cloud Tasks, Cloud KMS.
+- **Analytics/Crash:** Firebase Analytics, Crashlytics, Performance Monitoring.
+- **Ads:** Google Mobile Ads SDK (banner, interstitial, rewarded, rewarded-interstitial), mediation optional later.
+- **Secrets & Config:** Remote Config + Firestore `/config` docs + build-time `.env` per flavor.
+- **Security:** AES-256 client-side envelope encryption for sensitive fields; Firestore Security Rules v2; App Check; reCAPTCHA/Play Integrity.
+- **Additional Security:** Certificate pinning, code obfuscation, runtime application self-protection (RASP)
+- **Monitoring:** Cloud Monitoring, Error Reporting, Uptime checks, custom metrics dashboards
+- **CDN:** Cloud CDN for static assets, image optimization
+- **Testing:** Firebase Test Lab, automated UI testing, security scanning
 
 ---
 
@@ -41,28 +41,29 @@ Awesome brief. Here's a complete, end-to-end development plan you can hand to en
 
 **Roles:**
 
-* **User** – uses activities, sees estimates, requests withdrawals, manages profile.
-* **Moderator** – reviews suspicious activity flags, handles support tickets.
-* **Finance Ops** – reviews payout batch, marks payouts settled, edits rates/fees (with 2-person approval).
-* **Admin** – all above + user actions (deactivate/reactivate), config management, read audit logs.
-* **Super Admin** – IAM-level ownership, break-glass.
-* **Compliance Officer** – reviews policy violations, manages age verification, handles legal requests
-* **Security Analyst** – monitors fraud patterns, manages security incidents, reviews audit logs
+- **User** – uses activities, sees estimates, requests withdrawals, manages profile.
+- **Moderator** – reviews suspicious activity flags, handles support tickets.
+- **Finance Ops** – reviews payout batch, marks payouts settled, edits rates/fees (with 2-person approval).
+- **Admin** – all above + user actions (deactivate/reactivate), config management, read audit logs.
+- **Super Admin** – IAM-level ownership, break-glass.
+- **Compliance Officer** – reviews policy violations, manages age verification, handles legal requests
+- **Security Analyst** – monitors fraud patterns, manages security incidents, reviews audit logs
 
 **Enhanced RBAC matrix:**
 
-* Content/activities: User (read), Admin (CRUD), Compliance Officer (review/flag).
-* Rates/fees/cooldowns: Finance Ops (propose/update), Admin (approve/apply), Super Admin (emergency override).
-* Payouts: Finance Ops (create batch/mark paid), Admin (override), User (request/see statements), Compliance Officer (review/hold).
-* Users: User (self), Admin (deactivate/reactivate, role change), Moderator (flag/unflag), Compliance Officer (age verification).
-* Audit logs: Admin/Super Admin/Security Analyst (read); immutable to everyone else.
-* Security incidents: Security Analyst (create/manage), Admin (review), Super Admin (resolve).
+- Content/activities: User (read), Admin (CRUD), Compliance Officer (review/flag).
+- Rates/fees/cooldowns: Finance Ops (propose/update), Admin (approve/apply), Super Admin (emergency override).
+- Payouts: Finance Ops (create batch/mark paid), Admin (override), User (request/see statements), Compliance Officer (review/hold).
+- Users: User (self), Admin (deactivate/reactivate, role change), Moderator (flag/unflag), Compliance Officer (age verification).
+- Audit logs: Admin/Super Admin/Security Analyst (read); immutable to everyone else.
+- Security incidents: Security Analyst (create/manage), Admin (review), Super Admin (resolve).
 
 **Role Assignment Rules:**
-* All role changes require dual approval (proposer + approver)
-* Admin roles require background verification
-* Time-limited elevated access for maintenance windows
-* Mandatory role review every 90 days
+
+- All role changes require dual approval (proposer + approver)
+- Admin roles require background verification
+- Time-limited elevated access for maintenance windows
+- Mandatory role review every 90 days
 
 ---
 
@@ -70,54 +71,54 @@ Awesome brief. Here's a complete, end-to-end development plan you can hand to en
 
 1. **Onboarding & auth**
 
-* Age verification screen (birth date + parental email for under-13)
-* Google Sign-In → create user doc with role=`user`, status=`active`, createdOn, referralCode (optional), ageGroup (13-17 / 18+), country.
-* **Enhanced KYC for 18+:** Document verification for higher withdrawal limits
-* Post-onboarding profile form (mobile, address, PIN/ZIP, UPI ID or PayPal ID). Sensitive fields stored encrypted.
-* **Parental consent flow:** Email verification + consent recording for minors
-* **Terms acceptance:** Explicit acceptance with timestamp and IP logging
+- Age verification screen (birth date + parental email for under-13)
+- Google Sign-In → create user doc with role=`user`, status=`active`, createdOn, referralCode (optional), ageGroup (13-17 / 18+), country.
+- **Enhanced KYC for 18+:** Document verification for higher withdrawal limits
+- Post-onboarding profile form (mobile, address, PIN/ZIP, UPI ID or PayPal ID). Sensitive fields stored encrypted.
+- **Parental consent flow:** Email verification + consent recording for minors
+- **Terms acceptance:** Explicit acceptance with timestamp and IP logging
 
 2. **Choose activity → answer → ad gating**
 
-* User picks **Math / Word / Puzzle** → sub-type (e.g., Math→random mix of + − × ÷ √).
-* **Difficulty progression:** Adaptive difficulty based on performance history
-* Show question. **Enhanced lifelines** (50/50, reveal digit/letter, extra time, ask AI hint).
-* **Answer validation:** Server-side verification to prevent tampering
-* If **correct** → proceed to **ad-eligible state** → (show the selected ad *format*, not a promise of earnings for viewing).
-* If **incorrect or skipped** → back to activities; do **not** show ad.
-* **Performance tracking:** Detailed analytics for learning improvement
+- User picks **Math / Word / Puzzle** → sub-type (e.g., Math→random mix of + − × ÷ √).
+- **Difficulty progression:** Adaptive difficulty based on performance history
+- Show question. **Enhanced lifelines** (50/50, reveal digit/letter, extra time, ask AI hint).
+- **Answer validation:** Server-side verification to prevent tampering
+- If **correct** → proceed to **ad-eligible state** → (show the selected ad _format_, not a promise of earnings for viewing).
+- If **incorrect or skipped** → back to activities; do **not** show ad.
+- **Performance tracking:** Detailed analytics for learning improvement
 
 3. **Enhanced cooling period & fraud prevention**
 
-* After a successful ad show (not tied to earnings), **lock that activity** for X seconds (Remote Config/Firestore). Cooldown applies app-wide.
-* **Device fingerprinting:** Track unique device characteristics
-* **Behavioral analysis:** Monitor answer patterns, timing, and consistency
-* **IP geolocation:** Flag unusual location changes
-* **Session monitoring:** Track session duration and activity patterns
+- After a successful ad show (not tied to earnings), **lock that activity** for X seconds (Remote Config/Firestore). Cooldown applies app-wide.
+- **Device fingerprinting:** Track unique device characteristics
+- **Behavioral analysis:** Monitor answer patterns, timing, and consistency
+- **IP geolocation:** Flag unusual location changes
+- **Session monitoring:** Track session duration and activity patterns
 
 4. **Comprehensive earnings model (policy-safe design)**
 
-* **Learning Points (LP):** Users earn LP for *completing activities correctly* (and streaks), **not** for ad views. Ads are ancillary.
-* **Ad Engagement Rewards (AER):** Separate from LP, users earn small fixed amounts for *time spent engaging* with ads (not for viewing/clicking). These are platform-defined rewards for user attention, not tied to ad revenue sharing.
-  * **Rewarded Video Ads:** 0.03 USD per completed view (30+ seconds)
-  * **Interstitial Ads:** 0.02 USD per engagement (5+ seconds interaction)
-  * **Rewarded Interstitial:** 0.025 USD per completed interaction
-  * **Banner Ads:** 0.001 USD per 30-second exposure (cumulative)
-* **Cash Eligibility Pool (CEP):** Platform allocates a daily/weekly **budget pool** (from ad revenue, sponsors, or subscription income). Users' **share** of the pool is proportional to LP (with fraud and fairness constraints).
-* **Total Daily Earnings = LP Pool Share + Ad Engagement Rewards + Bonus/Streak Multipliers**
-* **Dynamic pool allocation:** Adjust pool size based on user engagement and revenue
-* **Fraud-resistant distribution:** Cap individual user shares, detect coordination attacks
-* End of day, compute **Estimated Earnings = Pool \* (User LP / Total LP) + AER Total** with **caps/mins** from `/config`. This keeps payouts *decoupled from ad impressions/clicks*, aligning with AdMob policies. ([Google Help][1])
-* **Transparency reporting:** Daily breakdown of pool sources, AER earnings, and distribution logic
+- **Learning Points (LP):** Users earn LP for _completing activities correctly_ (and streaks), **not** for ad views. Ads are ancillary.
+- **Ad Engagement Rewards (AER):** Separate from LP, users earn small fixed amounts for _time spent engaging_ with ads (not for viewing/clicking). These are platform-defined rewards for user attention, not tied to ad revenue sharing.
+  - **Rewarded Video Ads:** 0.03 USD per completed view (30+ seconds)
+  - **Interstitial Ads:** 0.02 USD per engagement (5+ seconds interaction)
+  - **Rewarded Interstitial:** 0.025 USD per completed interaction
+  - **Banner Ads:** 0.001 USD per 30-second exposure (cumulative)
+- **Cash Eligibility Pool (CEP):** Platform allocates a daily/weekly **budget pool** (from ad revenue, sponsors, or subscription income). Users' **share** of the pool is proportional to LP (with fraud and fairness constraints).
+- **Total Daily Earnings = LP Pool Share + Ad Engagement Rewards + Bonus/Streak Multipliers**
+- **Dynamic pool allocation:** Adjust pool size based on user engagement and revenue
+- **Fraud-resistant distribution:** Cap individual user shares, detect coordination attacks
+- End of day, compute **Estimated Earnings = Pool \* (User LP / Total LP) + AER Total** with **caps/mins** from `/config`. This keeps payouts _decoupled from ad impressions/clicks_, aligning with AdMob policies. ([Google Help][1])
+- **Transparency reporting:** Daily breakdown of pool sources, AER earnings, and distribution logic
 
 5. **Enhanced statements & payout**
 
-* Daily statement: LP earned, share %, estimated earnings, adjustments, platform fees.
-* **Weekly summaries:** Progress tracking and goal setting
-* **Tax reporting:** Generate tax documents for significant earners
-* Month end: auto-settle if ≥ threshold; Finance Ops performs manual payout (initial releases) then marks transaction settled; user sees receipt & breakdown.
-* **Payout verification:** Multi-factor authentication for withdrawal requests
-* **Compliance checks:** AML screening for large transactions
+- Daily statement: LP earned, share %, estimated earnings, adjustments, platform fees.
+- **Weekly summaries:** Progress tracking and goal setting
+- **Tax reporting:** Generate tax documents for significant earners
+- Month end: auto-settle if ≥ threshold; Finance Ops performs manual payout (initial releases) then marks transaction settled; user sees receipt & breakdown.
+- **Payout verification:** Multi-factor authentication for withdrawal requests
+- **Compliance checks:** AML screening for large transactions
 
 ---
 
@@ -127,7 +128,7 @@ Awesome brief. Here's a complete, end-to-end development plan you can hand to en
 /users/{uid}
   displayName, email, photoUrl
   role: "user"|"moderator"|"finance"|"admin"|"superadmin"|"compliance"|"security"
-  status: "active"|"deactivated"|"suspended"|"pending_verification"
+  status: "active"|"deactivated"|"suspended"|"pendingVerification"
   ageGroup: "under13"|"13-17"|"18+"
   verificationStatus: "none"|"email"|"phone"|"document"|"full"
   profileEnc: { mobileEnc, addressEnc, pinEnc, upiEnc, paypalEnc, parentalConsentEnc }
@@ -206,7 +207,7 @@ Awesome brief. Here's a complete, end-to-end development plan you can hand to en
   ads: { bannersAlwaysOn:true, childSafeFormats: ["banner"], adultFormats: ["all"] }
   fraudThresholds: { maxLPPerDay: 1000, maxDevicesPerUser: 3, maxAERPerDay: 5.0 }
   complianceSettings: { parentalConsentRequired: true, dataRetentionDays: 2555 }
-  
+
   // Ad Engagement Reward Configuration
   aerConfig: {
     enabled: true,
@@ -235,7 +236,7 @@ Awesome brief. Here's a complete, end-to-end development plan you can hand to en
   actionThresholds: { flag: 30, investigate: 50, suspend: 80 }
   encryptionKeys: { currentKeyId, rotationSchedule }
   integrityChecks: { playIntegrityEnabled: true, rootDetection: true }
-  
+
   // AER-specific fraud detection
   aerFraudDetection: {
     maxAdsPerHour: 20,
@@ -271,8 +272,8 @@ service cloud.firestore {
     function isSignedIn() { return request.auth != null; }
     function uid() { return request.auth.uid; }
     function hasRole(r) { return isSignedIn() && r in request.auth.token.roles; }
-    function hasAnyRole(roles) { 
-      return isSignedIn() && roles.hasAny(request.auth.token.roles); 
+    function hasAnyRole(roles) {
+      return isSignedIn() && roles.hasAny(request.auth.token.roles);
     }
     function isAdult() { return request.auth.token.ageGroup == "18+"; }
     function isMinor() { return request.auth.token.ageGroup in ["under13", "13-17"]; }
@@ -281,15 +282,15 @@ service cloud.firestore {
     // Enhanced user document rules
     match /users/{userId} {
       allow read: if isSignedIn() && (
-        userId == uid() || 
+        userId == uid() ||
         hasAnyRole(["admin", "moderator", "compliance"])
       );
-      allow create: if isSignedIn() && userId == uid() && 
+      allow create: if isSignedIn() && userId == uid() &&
         validateUserCreate(resource.data);
-      allow update: if isSignedIn() && userId == uid() && 
+      allow update: if isSignedIn() && userId == uid() &&
         validateUserUpdate(resource.data) ||
         hasRole('admin') && validateAdminUpdate(resource.data);
-      allow delete: if hasRole('admin') && 
+      allow delete: if hasRole('admin') &&
         request.auth.token.dataRetentionCompliant == true;
     }
 
@@ -315,7 +316,7 @@ service cloud.firestore {
     }
 
     match /complianceRequests/{id} {
-      allow read: if hasAnyRole(["compliance", "admin"]) || 
+      allow read: if hasAnyRole(["compliance", "admin"]) ||
         resource.data.userId == uid();
       allow create: if isSignedIn();
       allow update: if hasAnyRole(["compliance", "admin"]);
@@ -331,8 +332,8 @@ service cloud.firestore {
 
     // Age-appropriate content filtering
     match /activities/{activityId} {
-      allow read: if isSignedIn() && 
-        (resource.data.ageGroup == "all" || 
+      allow read: if isSignedIn() &&
+        (resource.data.ageGroup == "all" ||
          resource.data.ageGroup == request.auth.token.ageGroup ||
          isAdult());
       allow write: if hasRole('admin');
@@ -341,7 +342,7 @@ service cloud.firestore {
     // Enhanced events with fraud prevention
     match /lpEvents/{userId}/{eventId} {
       allow read: if isSignedIn() && userId == uid();
-      allow create: if isSignedIn() && userId == uid() && 
+      allow create: if isSignedIn() && userId == uid() &&
         validateLPEvent(resource.data);
       allow update, delete: if false;
     }
@@ -355,7 +356,7 @@ service cloud.firestore {
     // AER events with strict validation
     match /aerEvents/{userId}/{eventId} {
       allow read: if isSignedIn() && userId == uid();
-      allow create: if isSignedIn() && userId == uid() && 
+      allow create: if isSignedIn() && userId == uid() &&
         canEarnAER() && validateAEREvent(resource.data);
       allow update, delete: if false;
     }
@@ -371,9 +372,9 @@ service cloud.firestore {
     // Enhanced ad events with engagement tracking
     match /adEvents/{userId}/{eventId} {
       allow read: if isSignedIn() && userId == uid();
-      allow create: if isSignedIn() && userId == uid() && 
+      allow create: if isSignedIn() && userId == uid() &&
         validateAdEvent(resource.data);
-      allow update: if hasAnyRole(["admin", "security"]) && 
+      allow update: if hasAnyRole(["admin", "security"]) &&
         validateAdEventUpdate(resource.data);
       allow delete: if false;
     }
@@ -397,25 +398,26 @@ service cloud.firestore {
 
 # Enhanced Server architecture (Cloud Functions)
 
-* **Core Processing Functions:**
-  * **Daily earnings job** (scheduled 00:30 local with retry logic)
-    * Calculate LP pool distribution
-    * Process and validate AER earnings
-    * Apply fraud penalties and age group multipliers
-    * Generate combined daily earnings statements
-  * **AER validation processor** (real-time trigger on aerEvents)
-    * Validate engagement time authenticity
-    * Check daily/hourly limits
-    * Apply fraud detection algorithms
-    * Update user AER totals
-  * **Monthly settlement job** (1st day, 02:00 with compliance checks)
-  * **Real-time fraud detection** (triggered on user events, enhanced for AER farming)
+- **Core Processing Functions:**
 
-* **AER-Specific Functions:**
-  * **Ad engagement validator** (validate engagement timing and authenticity)
-  * **AER rate calculator** (apply current rates, age multipliers, fraud penalties)
-  * **AER fraud detector** (pattern analysis for ad farming)
-  * **AER limit enforcer** (daily/hourly caps per user)
+  - **Daily earnings job** (scheduled 00:30 local with retry logic)
+    - Calculate LP pool distribution
+    - Process and validate AER earnings
+    - Apply fraud penalties and age group multipliers
+    - Generate combined daily earnings statements
+  - **AER validation processor** (real-time trigger on aerEvents)
+    - Validate engagement time authenticity
+    - Check daily/hourly limits
+    - Apply fraud detection algorithms
+    - Update user AER totals
+  - **Monthly settlement job** (1st day, 02:00 with compliance checks)
+  - **Real-time fraud detection** (triggered on user events, enhanced for AER farming)
+
+- **AER-Specific Functions:**
+  - **Ad engagement validator** (validate engagement timing and authenticity)
+  - **AER rate calculator** (apply current rates, age multipliers, fraud penalties)
+  - **AER fraud detector** (pattern analysis for ad farming)
+  - **AER limit enforcer** (daily/hourly caps per user)
 
 ...existing code...
 
@@ -428,23 +430,23 @@ service cloud.firestore {
 if (cooldownOver(activityType) && canShowAd(user)) {
   final format = pickAdFormatForUser(user, activityType);
   final adStartTime = DateTime.now();
-  
+
   final adResult = await tryShowAd(format);
-  
+
   if (adResult.shown) {
     final engagementTime = DateTime.now().difference(adStartTime).inSeconds;
-    
+
     // Log ad event with engagement tracking
     await logAdEvent(uid, format, adResult, engagementTime);
-    
+
     // Check if qualifies for AER
     final aerAmount = await calculateAER(format, engagementTime, user);
-    
+
     if (aerAmount > 0) {
       await logAEREvent(uid, format, aerAmount, engagementTime);
       await updateUserAERStats(uid, aerAmount);
     }
-    
+
     lockActivity(activityType, cooldownSecondsFromConfig);
   }
 }
@@ -453,36 +455,36 @@ if (cooldownOver(activityType) && canShowAd(user)) {
 Future<double> calculateAER(String format, int engagementTime, User user) async {
   final config = await getAERConfig();
   final formatConfig = config.rates[format];
-  
+
   // Check minimum engagement time
   if (engagementTime < formatConfig.minEngagementSeconds) {
     return 0.0;
   }
-  
+
   // Check daily limits
   final todayAER = await getUserTodayAER(user.uid);
   if (todayAER >= config.maxDailyAERPerUser) {
     return 0.0;
   }
-  
+
   // Check format-specific daily limits
   final formatTodayCount = await getUserTodayFormatCount(user.uid, format);
   if (formatTodayCount >= formatConfig.maxPerDay) {
     return 0.0;
   }
-  
+
   // Apply base amount
   double amount = formatConfig.amount;
-  
+
   // Apply age group multiplier
   final ageMultiplier = config.ageGroupMultipliers[user.ageGroup] ?? 0.0;
   amount *= ageMultiplier;
-  
+
   // Apply fraud penalty if user is flagged
   if (user.flags.suspicious) {
     amount *= config.qualificationRules.suspiciousActivityPenalty;
   }
-  
+
   return amount;
 }
 ```
@@ -491,51 +493,56 @@ Future<double> calculateAER(String format, int engagementTime, User user) async 
 
 # Enhanced Anti-fraud for AER
 
-* **Engagement Pattern Analysis:**
-  * Track timing variations in ad engagement
-  * Detect users with suspiciously consistent engagement times
-  * Monitor rapid ad succession patterns
-  * Flag users with perfect engagement rates
+- **Engagement Pattern Analysis:**
 
-* **Device and Network Analysis:**
-  * Cross-reference device fingerprints with AER patterns
-  * Monitor for device switching to avoid limits
-  * Detect emulator usage for ad farming
-  * Track IP reputation and VPN usage
+  - Track timing variations in ad engagement
+  - Detect users with suspiciously consistent engagement times
+  - Monitor rapid ad succession patterns
+  - Flag users with perfect engagement rates
 
-* **Behavioral Biometrics for Ads:**
-  * Monitor interaction patterns during ad display
-  * Track attention indicators (screen touches, app focus)
-  * Detect automated ad interaction tools
-  * Validate human-like engagement behaviors
+- **Device and Network Analysis:**
 
-* **Rate Limiting and Caps:**
-  * Per-user daily AER limits
-  * Per-format hourly limits
-  * Cooldown periods between eligible ads
-  * Progressive penalties for suspicious activity
+  - Cross-reference device fingerprints with AER patterns
+  - Monitor for device switching to avoid limits
+  - Detect emulator usage for ad farming
+  - Track IP reputation and VPN usage
+
+- **Behavioral Biometrics for Ads:**
+
+  - Monitor interaction patterns during ad display
+  - Track attention indicators (screen touches, app focus)
+  - Detect automated ad interaction tools
+  - Validate human-like engagement behaviors
+
+- **Rate Limiting and Caps:**
+  - Per-user daily AER limits
+  - Per-format hourly limits
+  - Cooldown periods between eligible ads
+  - Progressive penalties for suspicious activity
 
 ---
 
 # Sample AER Analytics Dashboard
 
-* **Real-time AER Metrics:**
-  * Total AER distributed per day/hour
-  * Average engagement time by ad format
-  * User distribution by AER earning levels
-  * Fraud detection alert counts
+- **Real-time AER Metrics:**
 
-* **Ad Performance Insights:**
-  * Engagement time vs. AER correlation
-  * Format effectiveness for user retention
-  * Geographic patterns in ad engagement
-  * Age group differences in engagement
+  - Total AER distributed per day/hour
+  - Average engagement time by ad format
+  - User distribution by AER earning levels
+  - Fraud detection alert counts
 
-* **Fraud Prevention Analytics:**
-  * Suspicious pattern detection rates
-  * False positive/negative rates
-  * Impact of fraud penalties on user behavior
-  * Device and IP risk scoring effectiveness
+- **Ad Performance Insights:**
+
+  - Engagement time vs. AER correlation
+  - Format effectiveness for user retention
+  - Geographic patterns in ad engagement
+  - Age group differences in engagement
+
+- **Fraud Prevention Analytics:**
+  - Suspicious pattern detection rates
+  - False positive/negative rates
+  - Impact of fraud penalties on user behavior
+  - Device and IP risk scoring effectiveness
 
 ---
 
@@ -543,61 +550,66 @@ Future<double> calculateAER(String format, int engagementTime, User user) async 
 
 On the "How earnings work" screen, include:
 
-* **Learning Points (LP) System:**
-  * Earn LP for correct answers, streaks, and skill improvement
-  * LP determines your share of the daily learning pool
-  * Pool is funded by platform revenue, not individual ad views
+- **Learning Points (LP) System:**
 
-* **Ad Engagement Rewards (AER):**
-  * Fixed small amounts for time spent with ads
-  * Rates: Rewarded videos (₹2.50), Interstitials (₹1.65), Banners (₹0.08)
-  * Not tied to ad revenue - these are platform appreciation rewards
-  * Daily limits apply to prevent abuse
+  - Earn LP for correct answers, streaks, and skill improvement
+  - LP determines your share of the daily learning pool
+  - Pool is funded by platform revenue, not individual ad views
 
-* **Combined Daily Earnings:**
-  * Your LP pool share + Your AER rewards + Bonuses
-  * Transparent breakdown in daily statements
-  * All earnings subject to fraud review and platform terms
+- **Ad Engagement Rewards (AER):**
+
+  - Fixed small amounts for time spent with ads
+  - Rates: Rewarded videos (₹2.50), Interstitials (₹1.65), Banners (₹0.08)
+  - Not tied to ad revenue - these are platform appreciation rewards
+  - Daily limits apply to prevent abuse
+
+- **Combined Daily Earnings:**
+  - Your LP pool share + Your AER rewards + Bonuses
+  - Transparent breakdown in daily statements
+  - All earnings subject to fraud review and platform terms
 
 ---
 
 # AER Implementation Milestones
 
 **Week 3-4 Enhancement (during Ads integration):**
-* Implement engagement time tracking
-* Build AER calculation engine
-* Add AER configuration management
-* Create AER fraud detection algorithms
+
+- Implement engagement time tracking
+- Build AER calculation engine
+- Add AER configuration management
+- Create AER fraud detection algorithms
 
 **Week 5 Enhancement (during Earnings Engine):**
-* Integrate AER into daily earnings calculation
-* Build AER reporting and analytics
-* Implement AER limits and rate limiting
-* Add AER transparency features
+
+- Integrate AER into daily earnings calculation
+- Build AER reporting and analytics
+- Implement AER limits and rate limiting
+- Add AER transparency features
 
 **Week 6-7 Enhancement (during Admin & Compliance):**
-* Add AER configuration to admin console
-* Build AER fraud investigation tools
-* Implement AER audit trails
-* Add AER compliance reporting
+
+- Add AER configuration to admin console
+- Build AER fraud investigation tools
+- Implement AER audit trails
+- Add AER compliance reporting
 
 ---
 
 # One more thing: what to put on the “How payouts work” screen
 
-* How LP works and which actions earn LP
-* Daily pool explained (variable, not guaranteed; not tied to ad views/clicks)
-* Fees, thresholds, monthly settlement timeline
-* Fraud policy (what triggers review/suspension)
-* Country restrictions & tax notes (users responsible for local tax compliance; platform may request KYC if required)
+- How LP works and which actions earn LP
+- Daily pool explained (variable, not guaranteed; not tied to ad views/clicks)
+- Fees, thresholds, monthly settlement timeline
+- Fraud policy (what triggers review/suspension)
+- Country restrictions & tax notes (users responsible for local tax compliance; platform may request KYC if required)
 
 ---
 
 If you want, I can turn this into:
 
-* a **Firestore security rules file** ready to paste,
-* a **Flutter folder scaffold** with providers, routes, and example widgets,
-* and a **data dictionary** + **Remote Config defaults** JSON.
+- a **Firestore security rules file** ready to paste,
+- a **Flutter folder scaffold** with providers, routes, and example widgets,
+- and a **data dictionary** + **Remote Config defaults** JSON.
 
 [1]: https://support.google.com/admob/answer/6128543?hl=en&utm_source=chatgpt.com "AdMob policies and restrictions - Google Help"
 [2]: https://support.google.com/googleplay/android-developer/answer/9867159?hl=en&utm_source=chatgpt.com "Manage target audience and app content settings - Play Console Help"

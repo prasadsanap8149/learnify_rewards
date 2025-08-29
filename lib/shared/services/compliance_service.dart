@@ -91,8 +91,8 @@ class ComplianceService {
     }
 
     if (age < 13) return AgeGroup.under13;
-    if (age >= 13 && age <= 17) return AgeGroup.thirteen_to_seventeen;
-    return AgeGroup.eighteen_plus;
+    if (age >= 13 && age <= 17) return AgeGroup.thirteenToSeventeen;
+    return AgeGroup.eighteenPlus;
   }
 
   // Calculate expiration date based on age group
@@ -100,9 +100,9 @@ class ComplianceService {
     switch (ageGroup) {
       case AgeGroup.under13:
         return DateTime.now().add(const Duration(days: 365)); // 1 year
-      case AgeGroup.thirteen_to_seventeen:
+      case AgeGroup.thirteenToSeventeen:
         return DateTime.now().add(const Duration(days: 365 * 2)); // 2 years
-      case AgeGroup.eighteen_plus:
+      case AgeGroup.eighteenPlus:
         return null; // No expiration for adults
     }
   }
@@ -327,7 +327,7 @@ class ComplianceService {
         if (user != null && user.status == UserStatus.active) {
           await _userRepository.updateUserStatus(
             verification.userId,
-            UserStatus.pending_verification,
+            UserStatus.pendingVerification,
             reason: 'Age verification expired',
           );
         }

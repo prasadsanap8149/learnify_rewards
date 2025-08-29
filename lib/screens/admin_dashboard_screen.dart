@@ -510,7 +510,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         return Colors.green;
       case 'suspended':
         return Colors.red;
-      case 'pending_verification':
+      case 'pendingVerification':
         return Colors.orange;
       default:
         return Colors.grey;

@@ -63,8 +63,8 @@ class _AgeVerificationScreenState extends State<AgeVerificationScreen> {
 
   AgeGroup _getAgeGroup(int age) {
     if (age < 13) return AgeGroup.under13;
-    if (age < 18) return AgeGroup.thirteen_to_seventeen;
-    return AgeGroup.eighteen_plus;
+    if (age < 18) return AgeGroup.thirteenToSeventeen;
+    return AgeGroup.eighteenPlus;
   }
 
   void _submitVerification() async {

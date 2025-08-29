@@ -8,9 +8,9 @@ enum UserRole {
   security
 }
 
-enum UserStatus { active, deactivated, suspended, pending_verification }
+enum UserStatus { active, deactivated, suspended, pendingVerification }
 
-enum AgeGroup { under13, thirteen_to_seventeen, eighteen_plus }
+enum AgeGroup { under13, thirteenToSeventeen, eighteenPlus }
 
 enum VerificationStatus { none, email, phone, document, full }
 
@@ -184,4 +184,145 @@ class User {
     this.updatedAt,
     this.lastLoginAt,
   });
+
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      uid: json['uid'] ?? '',
+      displayName: json['displayName'],
+      email: json['email'],
+      photoUrl: json['photoUrl'],
+      role: UserRole.values.firstWhere(
+        (e) => e.toString() == json['role'],
+        orElse: () => UserRole.user,
+      ),
+      status: UserStatus.values.firstWhere(
+        (e) => e.toString() == json['status'],
+        orElse: () => UserStatus.active,
+      ),
+      ageGroup: AgeGroup.values.firstWhere(
+        (e) => e.toString() == json['ageGroup'],
+        orElse: () => AgeGroup.eighteenPlus,
+      ),
+      verificationStatus: VerificationStatus.values.firstWhere(
+        (e) => e.toString() == json['verificationStatus'],
+        orElse: () => VerificationStatus.none,
+      ),
+      stats: json['stats'] != null ? UserStats.fromJson(json['stats']) : null,
+      flags: json['flags'] != null ? UserFlags.fromJson(json['flags']) : null,
+      deviceInfo: json['deviceInfo'] != null
+          ? DeviceInfo.fromJson(json['deviceInfo'])
+          : null,
+      parentalConsent: json['parentalConsent'] != null
+          ? ParentalConsent.fromJson(json['parentalConsent'])
+          : null,
+      createdAt: json['createdAt']?.toDate(),
+      updatedAt: json['updatedAt']?.toDate(),
+      lastLoginAt: json['lastLoginAt']?.toDate(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'uid': uid,
+      'displayName': displayName,
+      'email': email,
+      'photoUrl': photoUrl,
+      'role': role.toString(),
+      'status': status.toString(),
+      'ageGroup': ageGroup.toString(),
+      'verificationStatus': verificationStatus.toString(),
+      'stats': stats?.toJson(),
+      'flags': flags?.toJson(),
+      'deviceInfo': deviceInfo?.toJson(),
+      'parentalConsent': parentalConsent?.toJson(),
+      'createdAt': createdAt,
+      'updatedAt': updatedAt,
+      'lastLoginAt': lastLoginAt,
+    };
+  }
+
+  User copyWith({
+    String? uid,
+    String? displayName,
+    String? email,
+    String? photoUrl,
+    UserRole? role,
+    UserStatus? status,
+    AgeGroup? ageGroup,
+    VerificationStatus? verificationStatus,
+    UserStats? stats,
+    UserFlags? flags,
+    DeviceInfo? deviceInfo,
+    ParentalConsent? parentalConsent,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    DateTime? lastLoginAt,
+  }) {
+    return User(
+      uid: uid ?? this.uid,
+      displayName: displayName ?? this.displayName,
+      email: email ?? this.email,
+      photoUrl: photoUrl ?? this.photoUrl,
+      role: role ?? this.role,
+      status: status ?? this.status,
+      ageGroup: ageGroup ?? this.ageGroup,
+      verificationStatus: verificationStatus ?? this.verificationStatus,
+      stats: stats ?? this.stats,
+      flags: flags ?? this.flags,
+      deviceInfo: deviceInfo ?? this.deviceInfo,
+      parentalConsent: parentalConsent ?? this.parentalConsent,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      lastLoginAt: lastLoginAt ?? this.lastLoginAt,
+    );
+  }
+
+  /// Check if user requires parental consent
+  bool get requiresParentalConsent {
+    return ageGroup == AgeGroup.under13 ||
+        ageGroup == AgeGroup.thirteenToSeventeen;
+  }
+
+  /// Check if user is verified
+  bool get isVerified {
+    return verificationStatus != VerificationStatus.none;
+  }
+
+  /// Check if user is active
+  bool get isActive {
+    return status == UserStatus.active;
+  }
+
+  /// Check if user can withdraw funds
+  bool get canWithdraw {
+    return isActive &&
+        isVerified &&
+        (flags?.suspicious != true) &&
+        (!requiresParentalConsent || parentalConsent?.granted == true);
+  }
+
+  /// Get display name or fallback
+  String get displayNameOrEmail {
+    return displayName ?? email ?? 'User $uid';
+  }
+
+  /// Check if user has admin privileges
+  bool get isAdmin {
+    return [UserRole.admin, UserRole.superadmin, UserRole.finance]
+        .contains(role);
+  }
+
+  @override
+  String toString() {
+    return 'User(uid: $uid, email: $email, role: $role, status: $status)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is User && other.uid == uid;
+  }
+
+  @override
+  int get hashCode => uid.hashCode;
 }

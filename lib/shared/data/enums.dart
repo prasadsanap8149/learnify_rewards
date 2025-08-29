@@ -17,8 +17,9 @@ enum WithdrawalMethod {
 /// Withdrawal request status lifecycle
 enum WithdrawalStatus {
   pending, // Request submitted, awaiting admin review
-  pendingReview,
-  approved,
+  pendingReview, // Under review by admin
+  pendingSettlement, // Approved and awaiting manual settlement
+  approved, // Approved for processing
   processing, // Admin is processing the payment
   completed, // Payment sent successfully
   rejected, // Request rejected by admin
@@ -249,6 +250,12 @@ extension WithdrawalStatusExtension on WithdrawalStatus {
     switch (this) {
       case WithdrawalStatus.pending:
         return 'Pending Review';
+      case WithdrawalStatus.pendingReview:
+        return 'Under Review';
+      case WithdrawalStatus.pendingSettlement:
+        return 'Pending Settlement';
+      case WithdrawalStatus.approved:
+        return 'Approved';
       case WithdrawalStatus.processing:
         return 'Processing Payment';
       case WithdrawalStatus.completed:
@@ -259,12 +266,6 @@ extension WithdrawalStatusExtension on WithdrawalStatus {
         return 'Cancelled';
       case WithdrawalStatus.failed:
         return 'Failed';
-      case WithdrawalStatus.pendingReview:
-        // TODO: Handle this case.
-        throw UnimplementedError();
-      case WithdrawalStatus.approved:
-        // TODO: Handle this case.
-        throw UnimplementedError();
     }
   }
 
@@ -272,6 +273,12 @@ extension WithdrawalStatusExtension on WithdrawalStatus {
     switch (this) {
       case WithdrawalStatus.pending:
         return '⏳';
+      case WithdrawalStatus.pendingReview:
+        return '👁️';
+      case WithdrawalStatus.pendingSettlement:
+        return '💰';
+      case WithdrawalStatus.approved:
+        return '✅';
       case WithdrawalStatus.processing:
         return '⚡';
       case WithdrawalStatus.completed:
@@ -282,12 +289,6 @@ extension WithdrawalStatusExtension on WithdrawalStatus {
         return '🚫';
       case WithdrawalStatus.failed:
         return '⚠️';
-      case WithdrawalStatus.pendingReview:
-        // TODO: Handle this case.
-        throw UnimplementedError();
-      case WithdrawalStatus.approved:
-        // TODO: Handle this case.
-        throw UnimplementedError();
     }
   }
 

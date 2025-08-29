@@ -19,7 +19,7 @@ service cloud.firestore {
     }
     
     function getAgeGroup() {
-      return request.auth.token.ageGroup != null ? request.auth.token.ageGroup : 'eighteen_plus';
+      return request.auth.token.ageGroup != null ? request.auth.token.ageGroup : 'eighteenPlus';
     }
     
     function getVerificationLevel() {
@@ -60,11 +60,11 @@ service cloud.firestore {
     
     // Age group validation functions
     function isAdult() {
-      return getAgeGroup() == 'eighteen_plus';
+      return getAgeGroup() == 'eighteenPlus';
     }
     
     function isMinor() {
-      return getAgeGroup() in ['under13', 'thirteen_to_seventeen'];
+      return getAgeGroup() in ['under13', 'thirteenToSeventeen'];
     }
     
     function isUnder13() {
@@ -111,8 +111,8 @@ service cloud.firestore {
       return data.keys().hasAll(['uid', 'role', 'status', 'ageGroup', 'verificationStatus']) &&
              data.uid == getUserId() &&
              data.role in ['user', 'moderator', 'finance', 'admin', 'superadmin', 'compliance', 'security'] &&
-             data.status in ['active', 'deactivated', 'suspended', 'pending_verification'] &&
-             data.ageGroup in ['under13', 'thirteen_to_seventeen', 'eighteen_plus'] &&
+             data.status in ['active', 'deactivated', 'suspended', 'pendingVerification'] &&
+             data.ageGroup in ['under13', 'thirteenToSeventeen', 'eighteenPlus'] &&
              data.verificationStatus in ['none', 'email', 'phone', 'document', 'full'] &&
              // Validate timestamps
              (data.createdAt == null || data.createdAt <= request.time) &&
@@ -177,7 +177,7 @@ service cloud.firestore {
              data.userId == getUserId() &&
              data.method in ['self_reported', 'parental_confirmation', 'document_verification'] &&
              data.status in ['pending', 'verified', 'rejected', 'expired'] &&
-             data.verifiedAgeGroup in ['under13', 'thirteen_to_seventeen', 'eighteen_plus'] &&
+             data.verifiedAgeGroup in ['under13', 'thirteenToSeventeen', 'eighteenPlus'] &&
              isValidTimestamp(data.createdAt);
     }
     
@@ -195,7 +195,7 @@ service cloud.firestore {
                       validateUserData(request.resource.data) &&
                       request.resource.data.role == 'user' &&
                       // Ensure proper age verification for minors
-                      (request.resource.data.ageGroup == 'eighteen_plus' || 
+                      (request.resource.data.ageGroup == 'eighteenPlus' || 
                        exists(/databases/$(database)/documents/age_verifications/$(userId)));
       
       allow update: if validateUserUpdate(resource.data, request.resource.data);
@@ -214,7 +214,7 @@ service cloud.firestore {
       
       allow create: if isModerator() && 
                       request.resource.data.keys().hasAll(['title', 'type', 'ageGroup', 'difficulty']) &&
-                      request.resource.data.ageGroup in ['under13', 'thirteen_to_seventeen', 'eighteen_plus', 'all'];
+                      request.resource.data.ageGroup in ['under13', 'thirteenToSeventeen', 'eighteenPlus', 'all'];
       
       allow update: if isModerator() && 
                       request.resource.data.diff(resource.data).affectedKeys()

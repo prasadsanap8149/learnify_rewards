@@ -4,39 +4,49 @@ import 'package:learnify_rewards/shared/domain/entities/user.dart';
 
 class AuthService {
   final auth.FirebaseAuth _firebaseAuth = auth.FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: [
+      'email',
+      'profile',
+    ],
+  );
 
   Future<User?> signInWithGoogle() async {
-    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-    if (googleUser == null) {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        return null;
+      }
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+      final auth.AuthCredential credential = auth.GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final auth.UserCredential userCredential =
+          await _firebaseAuth.signInWithCredential(credential);
+      final auth.User? firebaseUser = userCredential.user;
+
+      if (firebaseUser == null) {
+        return null;
+      }
+
+      return User(
+        uid: firebaseUser.uid,
+        displayName: firebaseUser.displayName,
+        email: firebaseUser.email,
+        photoUrl: firebaseUser.photoURL,
+        role: UserRole.user, // Default role
+        status: UserStatus.active, // Default status
+        ageGroup: AgeGroup.eighteenPlus, // Placeholder, needs to be determined
+        verificationStatus: VerificationStatus.email, // Default
+      );
+    } catch (e) {
+      print('Error signing in with Google: $e');
       return null;
     }
-
-    final GoogleSignInAuthentication googleAuth =
-        await googleUser.authentication;
-    final auth.AuthCredential credential = auth.GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
-
-    final auth.UserCredential userCredential =
-        await _firebaseAuth.signInWithCredential(credential);
-    final auth.User? firebaseUser = userCredential.user;
-
-    if (firebaseUser == null) {
-      return null;
-    }
-
-    return User(
-      uid: firebaseUser.uid,
-      displayName: firebaseUser.displayName,
-      email: firebaseUser.email,
-      photoUrl: firebaseUser.photoURL,
-      role: UserRole.user, // Default role
-      status: UserStatus.active, // Default status
-      ageGroup: AgeGroup.eighteen_plus, // Placeholder, needs to be determined
-      verificationStatus: VerificationStatus.email, // Default
-    );
   }
 
   Future<void> signOut() async {
@@ -56,7 +66,7 @@ class AuthService {
         photoUrl: firebaseUser.photoURL,
         role: UserRole.user,
         status: UserStatus.active,
-        ageGroup: AgeGroup.eighteen_plus,
+        ageGroup: AgeGroup.eighteenPlus,
         verificationStatus: VerificationStatus.email,
       );
     });
