@@ -90,7 +90,7 @@ redemptions/
 
 ### Android (Google Play Store)
 
-- **App ID**: `com.prasadSanap.learnify_rewards.app`
+- **App ID**: `com.prasadSanap.learnify_rewards`
 - **Target SDK**: 35 (Android 15)
 - **Min SDK**: 21 (Android 5.0)
 - **Signing**: Release signing configured
@@ -99,7 +99,7 @@ redemptions/
 
 ### iOS (App Store)
 
-- **Bundle ID**: `com.prasadSanap.learnify_rewards.app`
+- **Bundle ID**: `com.prasadSanap.learnify_rewards`
 - **Target iOS**: 12.0+
 - **Privacy**: All required usage descriptions
 - **App Transport Security**: Configured

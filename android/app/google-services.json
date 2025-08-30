@@ -1,40 +1,21 @@
 {
   "project_info": {
-    "project_number": "1023882613662",
-    "project_id": "learnify-rewards-dev",
-    "storage_bucket": "learnify-rewards-dev.firebasestorage.app"
+    "project_number": "889250542352",
+    "project_id": "learnify-rewards-dev-8de68",
+    "storage_bucket": "learnify-rewards-dev-8de68.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1023882613662:android:531ea5a4f9b54bc0c5bc8f",
+        "mobilesdk_app_id": "1:889250542352:android:631b5a86a1721d7cf0eb95",
         "android_client_info": {
-          "package_name": "com.prasadSanap.learnify_rewards.app"
+          "package_name": "com.prasadSanap.learnify_rewards"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyB4X_vWefMxB6EceXDVCjdWW7YcBILDPL0"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:1023882613662:android:531ea5a4f9b54bc0c5bc8f",
-        "android_client_info": {
-          "package_name": "com.prasadSanap.learnify_rewards.app.debug"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyB4X_vWefMxB6EceXDVCjdWW7YcBILDPL0"
+          "current_key": "AIzaSyDDmFwWQ0AOzeQbQyaBdqpwU0r5UdK8DDE"
         }
       ],
       "services": {

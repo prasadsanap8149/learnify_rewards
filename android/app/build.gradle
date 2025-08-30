@@ -27,7 +27,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace "com.prasadSanap.learnify_rewards.app"
+    namespace "com.prasadSanap.learnify_rewards"
     compileSdk 35
     ndkVersion "27.0.12077973"
 
@@ -63,7 +63,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.prasadSanap.learnify_rewards.app"
+        applicationId "com.prasadSanap.learnify_rewards"
         minSdkVersion 23
         targetSdkVersion 35
         versionCode flutterVersionCode.toInteger()
