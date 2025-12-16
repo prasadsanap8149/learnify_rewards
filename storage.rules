@@ -1,0 +1,98 @@
+rules_version = '2';
+
+// Enhanced Firebase Storage Rules for Learn & Earn App
+// Zero server cost storage rules with comprehensive security
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserId() {
+      return request.auth.uid;
+    }
+    
+    function isAdmin() {
+      return request.auth.token.role == 'admin' || 
+             request.auth.token.role == 'superadmin';
+    }
+    
+    function isOwnerOrAdmin(userId) {
+      return getUserId() == userId || isAdmin();
+    }
+    
+    function isValidImageType() {
+      return resource.contentType.matches('image/.*');
+    }
+    
+    function isValidSize(maxSize) {
+      return resource.size < maxSize;
+    }
+    
+    function hasParentalConsent() {
+      return request.auth.token.parentalConsent == true;
+    }
+    
+    function isMinor() {
+      return request.auth.token.ageGroup in ['under13', 'thirteenToSeventeen'];
+    }
+    
+    // Profile pictures
+    match /profiles/{userId}/avatar/{imageId} {
+      allow read: if true; // Public read for profile pictures
+      allow write: if isAuthenticated() && 
+                      isOwnerOrAdmin(userId) &&
+                      isValidImageType() &&
+                      isValidSize(5 * 1024 * 1024) && // 5MB limit
+                      (!isMinor() || hasParentalConsent());
+      allow delete: if isAuthenticated() && isOwnerOrAdmin(userId);
+    }
+    
+    // Activity content (admin only)
+    match /activities/{activityId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write, delete: if isAdmin();
+    }
+    
+    // Reward images (admin only)
+    match /rewards/{rewardId}/{allPaths=**} {
+      allow read: if true; // Public read for reward images
+      allow write, delete: if isAdmin();
+    }
+    
+    // User documents (for verification - encrypted)
+    match /documents/{userId}/{documentType}/{documentId} {
+      allow read, write, delete: if isAuthenticated() && 
+                                   isOwnerOrAdmin(userId) &&
+                                   isValidSize(10 * 1024 * 1024); // 10MB limit
+    }
+    
+    // System assets (admin only)
+    match /system/{allPaths=**} {
+      allow read: if true; // Public read for system assets
+      allow write, delete: if isAdmin();
+    }
+    
+    // Temporary uploads (1 hour expiry)
+    match /temp/{userId}/{uploadId} {
+      allow read, write: if isAuthenticated() && 
+                          getUserId() == userId &&
+                          isValidSize(20 * 1024 * 1024); // 20MB limit
+      allow delete: if isAuthenticated() && 
+                     (getUserId() == userId || isAdmin());
+    }
+    
+    // Backup data (admin only)
+    match /backups/{allPaths=**} {
+      allow read, write, delete: if isAdmin();
+    }
+    
+    // Default deny
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

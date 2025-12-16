@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/serverless_manual_settlement_service.dart';
+import '../services/serverless_withdrawal_service.dart';
+import '../services/serverless_earnings_service.dart';
+import '../services/serverless_fraud_detection_service.dart';
 
 /// Serverless Admin Panel for Manual Settlement
 ///
@@ -19,17 +22,25 @@ class _ServerlessAdminPanelState extends State<ServerlessAdminPanel>
   late TabController _tabController;
   final ServerlessManualSettlementService _settlementService =
       ServerlessManualSettlementService.instance;
+  final ServerlessWithdrawalService _withdrawalService =
+      ServerlessWithdrawalService();
+  final ServerlessEarningsService _earningsService =
+      ServerlessEarningsService();
+  final ServerlessFraudDetectionService _fraudService =
+      ServerlessFraudDetectionService();
 
   DateTime _selectedDate = DateTime.now();
   List<String> _selectedRequests = [];
   bool _isProcessing = false;
   Map<String, dynamic>? _statistics;
+  Map<String, dynamic> _systemStats = {};
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _loadStatistics();
+    _loadSystemStats();
   }
 
   @override
@@ -52,6 +63,73 @@ class _ServerlessAdminPanelState extends State<ServerlessAdminPanel>
     }
   }
 
+  Future<void> _loadSystemStats() async {
+    try {
+      // Get system-wide statistics
+      final usersSnapshot =
+          await FirebaseFirestore.instance.collection('users').get();
+      final withdrawalsSnapshot = await FirebaseFirestore.instance
+          .collection('withdrawal_requests')
+          .get();
+      final activitiesSnapshot =
+          await FirebaseFirestore.instance.collection('user_activities').get();
+
+      double totalEarnings = 0;
+      int totalLP = 0;
+      int activeUsers = 0;
+      int flaggedUsers = 0;
+
+      for (final doc in usersSnapshot.docs) {
+        final data = doc.data();
+        totalEarnings += (data['totalEarnings'] ?? 0.0).toDouble();
+        totalLP += (data['learningPoints'] ?? 0) as int;
+
+        final lastActivity = data['lastActivityTimestamp'] as Timestamp?;
+        if (lastActivity != null) {
+          final daysSinceActivity =
+              DateTime.now().difference(lastActivity.toDate()).inDays;
+          if (daysSinceActivity <= 7) activeUsers++;
+        }
+
+        if (data['flagged'] == true) flaggedUsers++;
+      }
+
+      int pendingWithdrawals = 0;
+      double totalWithdrawalAmount = 0;
+
+      for (final doc in withdrawalsSnapshot.docs) {
+        final data = doc.data();
+        if (data['status'] == 'pending') pendingWithdrawals++;
+        totalWithdrawalAmount += (data['amount'] ?? 0.0).toDouble();
+      }
+
+      int todayActivities = 0;
+      final today = DateTime.now();
+      final todayString =
+          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+      for (final doc in activitiesSnapshot.docs) {
+        final data = doc.data();
+        if (data['date'] == todayString) todayActivities++;
+      }
+
+      setState(() {
+        _systemStats = {
+          'totalUsers': usersSnapshot.docs.length,
+          'activeUsers': activeUsers,
+          'flaggedUsers': flaggedUsers,
+          'totalEarnings': totalEarnings.toStringAsFixed(2),
+          'totalLP': totalLP,
+          'pendingWithdrawals': pendingWithdrawals,
+          'totalWithdrawalAmount': totalWithdrawalAmount.toStringAsFixed(2),
+          'todayActivities': todayActivities,
+        };
+      });
+    } catch (e) {
+      _showErrorSnackBar('Failed to load system stats: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -64,10 +142,13 @@ class _ServerlessAdminPanelState extends State<ServerlessAdminPanel>
           indicatorColor: Colors.white,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
+          isScrollable: true,
           tabs: const [
-            Tab(icon: Icon(Icons.pending_actions), text: 'Pending'),
+            Tab(icon: Icon(Icons.dashboard), text: 'Dashboard'),
+            Tab(icon: Icon(Icons.people), text: 'Users'),
+            Tab(icon: Icon(Icons.payment), text: 'Withdrawals'),
+            Tab(icon: Icon(Icons.security), text: 'Security'),
             Tab(icon: Icon(Icons.analytics), text: 'Statistics'),
-            Tab(icon: Icon(Icons.settings), text: 'Settings'),
           ],
         ),
       ),
@@ -79,9 +160,12 @@ class _ServerlessAdminPanelState extends State<ServerlessAdminPanel>
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildPendingWithdrawalsTab(),
+                //TODO: DEVELOP BELO TABS
+                // _buildDashboardTab(),
+                // _buildUsersTab(),
+                // _buildWithdrawalsTab(),
+                // _buildSecurityTab(),
                 _buildStatisticsTab(),
-                _buildSettingsTab(),
               ],
             ),
           ),

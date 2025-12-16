@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/activity_service.dart';
 import 'activity_detail_screen.dart';
 
@@ -334,61 +336,264 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
 
   Future<List<Map<String, dynamic>>> _getFilteredActivities(
       String status) async {
-    // This is a mock implementation - replace with actual data fetching
-    final allActivities = await _getMockActivities();
+    try {
+      // Ensure sample activities exist in database
+      await _ensureSampleActivitiesExist();
 
-    return allActivities.where((activity) {
-      final matchesStatus = activity['status'] == status;
-      final matchesCategory = _selectedCategory == 'all' ||
-          activity['category'] == _selectedCategory;
-      final matchesDifficulty = _selectedDifficulty == 'all' ||
-          activity['difficulty'] == _selectedDifficulty;
+      if (status == 'available') {
+        return await _getAvailableActivities();
+      } else if (status == 'in_progress') {
+        return await _getInProgressActivities();
+      } else if (status == 'completed') {
+        return await _getCompletedActivities();
+      }
 
-      return matchesStatus && matchesCategory && matchesDifficulty;
-    }).toList();
+      return [];
+    } catch (e) {
+      print('Error getting filtered activities: $e');
+      return [];
+    }
   }
 
-  Future<List<Map<String, dynamic>>> _getMockActivities() async {
-    // Mock data - replace with actual Firestore queries
-    return [
-      {
-        'id': '1',
-        'title': 'Basic Algebra',
-        'description':
-            'Learn fundamental algebraic concepts and solve linear equations.',
-        'category': 'math',
-        'difficulty': 'beginner',
-        'duration': '30 min',
-        'lpReward': 25.0,
-        'status': 'available',
-        'imageUrl': null,
-      },
-      {
-        'id': '2',
-        'title': 'Introduction to Python',
-        'description':
-            'Start your coding journey with Python programming basics.',
-        'category': 'coding',
-        'difficulty': 'beginner',
-        'duration': '45 min',
-        'lpReward': 40.0,
-        'status': 'in_progress',
-        'progress': 60.0,
-      },
-      {
-        'id': '3',
-        'title': 'World War II History',
-        'description': 'Explore the major events and impacts of World War II.',
-        'category': 'history',
-        'difficulty': 'intermediate',
-        'duration': '1 hour',
-        'lpReward': 50.0,
-        'status': 'completed',
-        'finalScore': 85,
-        'lpEarned': 42.5,
-        'completedAt': DateTime.now().subtract(const Duration(days: 2)),
-      },
-    ];
+  Future<List<Map<String, dynamic>>> _getAvailableActivities() async {
+    // Get all active activities
+    Query query = FirebaseFirestore.instance
+        .collection('activities')
+        .where('isActive', isEqualTo: true);
+
+    if (_selectedCategory != 'all') {
+      query = query.where('category', isEqualTo: _selectedCategory);
+    }
+
+    if (_selectedDifficulty != 'all') {
+      query = query.where('difficulty', isEqualTo: _selectedDifficulty);
+    }
+
+    final snapshot = await query.orderBy('createdAt', descending: true).get();
+
+    final activities = snapshot.docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      data['id'] = doc.id;
+      data['status'] = 'available';
+      return data;
+    }).toList();
+
+    return activities;
+  }
+
+  Future<List<Map<String, dynamic>>> _getInProgressActivities() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return [];
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection('user_activities')
+        .where('userId', isEqualTo: user.uid)
+        .where('status', isEqualTo: 'in_progress')
+        .orderBy('lastAccessedAt', descending: true)
+        .get();
+
+    final activities = <Map<String, dynamic>>[];
+
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+
+      // Apply filters
+      final matchesCategory = _selectedCategory == 'all' ||
+          data['activityCategory'] == _selectedCategory;
+      final matchesDifficulty = _selectedDifficulty == 'all' ||
+          data['difficulty'] == _selectedDifficulty;
+
+      if (matchesCategory && matchesDifficulty) {
+        data['id'] = doc.id;
+        data['status'] = 'in_progress';
+        activities.add(data);
+      }
+    }
+
+    return activities;
+  }
+
+  Future<List<Map<String, dynamic>>> _getCompletedActivities() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return [];
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection('user_activities')
+        .where('userId', isEqualTo: user.uid)
+        .where('status', isEqualTo: 'completed')
+        .orderBy('completedAt', descending: true)
+        .get();
+
+    final activities = <Map<String, dynamic>>[];
+
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+
+      // Apply filters
+      final matchesCategory = _selectedCategory == 'all' ||
+          data['activityCategory'] == _selectedCategory;
+      final matchesDifficulty = _selectedDifficulty == 'all' ||
+          data['difficulty'] == _selectedDifficulty;
+
+      if (matchesCategory && matchesDifficulty) {
+        data['id'] = doc.id;
+        data['status'] = 'completed';
+        activities.add(data);
+      }
+    }
+
+    return activities;
+  }
+
+  Future<void> _ensureSampleActivitiesExist() async {
+    try {
+      // Check if activities already exist
+      final existingActivities = await FirebaseFirestore.instance
+          .collection('activities')
+          .limit(1)
+          .get();
+
+      if (existingActivities.docs.isNotEmpty) {
+        return; // Activities already exist
+      }
+
+      // Create sample activities
+      final batch = FirebaseFirestore.instance.batch();
+      final activitiesRef = FirebaseFirestore.instance.collection('activities');
+
+      final sampleActivities = [
+        {
+          'title': 'Basic Algebra',
+          'description':
+              'Learn fundamental algebraic concepts and solve linear equations. Master variables, expressions, and basic equation solving.',
+          'category': 'math',
+          'difficulty': 'beginner',
+          'duration': 30,
+          'durationUnit': 'minutes',
+          'lpReward': 250,
+          'totalSteps': 5,
+          'type': 'interactive_lesson',
+          'isActive': true,
+          'imageUrl':
+              'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=400',
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+          'tags': ['algebra', 'equations', 'math'],
+          'prerequisites': [],
+          'ageRange': {'min': 12, 'max': 18},
+        },
+        {
+          'title': 'Introduction to Python',
+          'description':
+              'Start your coding journey with Python programming basics. Learn variables, loops, and functions.',
+          'category': 'coding',
+          'difficulty': 'beginner',
+          'duration': 45,
+          'durationUnit': 'minutes',
+          'lpReward': 400,
+          'totalSteps': 8,
+          'type': 'coding_tutorial',
+          'isActive': true,
+          'imageUrl':
+              'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?w=400',
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+          'tags': ['python', 'programming', 'beginner'],
+          'prerequisites': [],
+          'ageRange': {'min': 14, 'max': 25},
+        },
+        {
+          'title': 'World War II History',
+          'description':
+              'Explore the major events and impacts of World War II. Understand causes, key battles, and consequences.',
+          'category': 'history',
+          'difficulty': 'intermediate',
+          'duration': 60,
+          'durationUnit': 'minutes',
+          'lpReward': 500,
+          'totalSteps': 6,
+          'type': 'educational_content',
+          'isActive': true,
+          'imageUrl':
+              'https://images.unsplash.com/photo-1585944150965-2d2949de5bfb?w=400',
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+          'tags': ['WWII', 'history', 'warfare'],
+          'prerequisites': [],
+          'ageRange': {'min': 15, 'max': 22},
+        },
+        {
+          'title': 'Creative Writing Basics',
+          'description':
+              'Develop your storytelling skills with creative writing fundamentals. Learn character development and plot structure.',
+          'category': 'language',
+          'difficulty': 'beginner',
+          'duration': 40,
+          'durationUnit': 'minutes',
+          'lpReward': 350,
+          'totalSteps': 7,
+          'type': 'writing_workshop',
+          'isActive': true,
+          'imageUrl':
+              'https://images.unsplash.com/photo-1455390582262-044cdead277a?w=400',
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+          'tags': ['writing', 'creativity', 'language'],
+          'prerequisites': [],
+          'ageRange': {'min': 12, 'max': 20},
+        },
+        {
+          'title': 'Basic Chemistry',
+          'description':
+              'Discover the fascinating world of chemistry. Learn about atoms, molecules, and chemical reactions.',
+          'category': 'science',
+          'difficulty': 'intermediate',
+          'duration': 50,
+          'durationUnit': 'minutes',
+          'lpReward': 450,
+          'totalSteps': 6,
+          'type': 'science_lab',
+          'isActive': true,
+          'imageUrl':
+              'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=400',
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+          'tags': ['chemistry', 'science', 'experiments'],
+          'prerequisites': [],
+          'ageRange': {'min': 14, 'max': 18},
+        },
+        {
+          'title': 'Digital Art Fundamentals',
+          'description':
+              'Learn the basics of digital art creation. Master color theory, composition, and digital tools.',
+          'category': 'art',
+          'difficulty': 'beginner',
+          'duration': 55,
+          'durationUnit': 'minutes',
+          'lpReward': 380,
+          'totalSteps': 8,
+          'type': 'art_tutorial',
+          'isActive': true,
+          'imageUrl':
+              'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=400',
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+          'tags': ['digital art', 'design', 'creativity'],
+          'prerequisites': [],
+          'ageRange': {'min': 13, 'max': 25},
+        },
+      ];
+
+      for (int i = 0; i < sampleActivities.length; i++) {
+        final docRef = activitiesRef.doc();
+        batch.set(docRef, sampleActivities[i]);
+      }
+
+      await batch.commit();
+      print('Sample activities created successfully');
+    } catch (e) {
+      print('Error creating sample activities: $e');
+    }
   }
 
   void _startActivity(Map<String, dynamic> activity) async {
@@ -576,6 +781,29 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
     if (date == null) return '';
     return '${date.day}/${date.month}/${date.year}';
   }
+
+  String _formatDuration(Map<String, dynamic> activity) {
+    final duration = activity['duration'];
+    final unit = activity['durationUnit'] ?? 'minutes';
+
+    if (duration == null) return '';
+
+    if (unit == 'minutes') {
+      if (duration >= 60) {
+        final hours = duration ~/ 60;
+        final mins = duration % 60;
+        if (mins == 0) {
+          return '${hours}h';
+        } else {
+          return '${hours}h ${mins}m';
+        }
+      } else {
+        return '${duration}m';
+      }
+    }
+
+    return '$duration $unit';
+  }
 }
 
 class _ActivityCard extends StatelessWidget {
@@ -641,7 +869,8 @@ class _ActivityCard extends StatelessWidget {
                 children: [
                   Icon(Icons.schedule, size: 16, color: Colors.grey[600]),
                   const SizedBox(width: 4),
-                  Text(activity['duration'] ?? ''),
+                  //TODO: CREATE THIS FUNCTION _formatDuration(activity)
+                  //Text(_formatDuration(activity)),
                   const SizedBox(width: 16),
                   Icon(Icons.monetization_on,
                       size: 16, color: Colors.grey[600]),

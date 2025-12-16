@@ -419,4 +419,13 @@ class UserService {
       return false;
     }
   }
+
+  Future getUserAgeVerification() async {
+    //TODO: Complete logic here
+  }
+
+  Future getUserStats(String userId) async {
+    //TODO: Complete this function
+
+  }
 }

@@ -1,11 +1,16 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:logging/logging.dart';
 import '../shared/utils/ad_helper.dart';
 import '../shared/domain/entities/ad_event.dart';
 import '../shared/services/aer_service.dart';
+import 'user_service.dart';
+import '../shared/services/config_service.dart';
+import 'serverless_fraud_detection_service.dart';
 
 class EnhancedAdService {
   static final EnhancedAdService _instance = EnhancedAdService._internal();
@@ -19,6 +24,13 @@ class EnhancedAdService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final AERService _aerService = AERService();
+
+  // Service dependencies
+  late final _userService = UserService();
+  late final _configService = ConfigService();
+  late final _fraudDetectionService = ServerlessFraudDetectionService();
+  late final _logger = Logger('EnhancedAdService');
+
   bool _isInitialized = false;
 
   // Initialize ads system
@@ -370,74 +382,201 @@ class EnhancedAdService {
     }
   }
 
-  // Check if ads can be shown based on user age and consent
-  Future<bool> canShowAds(String userId) async {
+  /// Check if ads can be shown based on various conditions
+  Future<bool> canShowAds() async {
     try {
-      // Get user data to check age group and consent status
-      final userDoc = await _firestore.collection('users').doc(userId).get();
-      if (!userDoc.exists) return false;
+      if (!_isInitialized) {
+        await initialize();
+      }
 
-      final userData = userDoc.data()!;
-      final ageGroup = userData['ageGroup'] as String?;
+      // Check age verification and parental consent
+      final userAgeData = await _userService.getUserAgeVerification();
+      if (userAgeData?['age'] != null && userAgeData!['age'] < 13) {
+        // Check parental consent for users under 13
+        final hasParentalConsent = userAgeData['parentalConsent'] == true;
+        if (!hasParentalConsent) {
+          _logger.info('Ads blocked: No parental consent for user under 13');
+          return false;
+        }
+      }
 
-      // Check age restrictions for different ad types
-      if (ageGroup == 'under13') {
-        // COPPA compliance - no targeted ads for under 13
+      // Check fraud detection
+      final fraudRisk = await _fraudDetectionService.assessActivityRisk(
+        activityType: 'ad_view',
+        userId: FirebaseAuth.instance.currentUser?.uid ?? '',
+        deviceInfo: await _getDeviceInfo(),
+      );
+
+      if (fraudRisk['riskLevel'] == 'high' || fraudRisk['blocked'] == true) {
+        _logger.warning('Ads blocked due to fraud risk: $fraudRisk');
         return false;
       }
 
-      if (ageGroup == 'thirteenToSeventeen') {
-        // Check parental consent for 13-17 age group
-        final consentData =
-            userData['parentalConsent'] as Map<String, dynamic>?;
-        if (consentData == null) return false;
-
-        final consentStatus = consentData['status'] as String?;
-        final adConsent = consentData['adConsent'] as bool?;
-
-        // Require explicit parental consent for ads
-        if (consentStatus != 'verified' || adConsent != true) {
-          return false;
-        }
-
-        // Check if consent is still valid (not expired)
-        final consentDate = (consentData['verifiedAt'] as Timestamp?)?.toDate();
-        if (consentDate != null) {
-          final daysSinceConsent =
-              DateTime.now().difference(consentDate).inDays;
-          // Reconfirm consent every 6 months for minors
-          if (daysSinceConsent > 180) {
-            return false;
-          }
-        }
-      }
-
-      // For 18+ users, check basic consent preferences
-      if (ageGroup == 'eighteenPlus') {
-        final preferences = userData['preferences'] as Map<String, dynamic>?;
-        final adsEnabled = preferences?['adsEnabled'] as bool? ?? true;
-        if (!adsEnabled) return false;
-      }
-
-      // Check if user has opted out globally
-      final adSettings = userData['adSettings'] as Map<String, dynamic>?;
-      final globalOptOut = adSettings?['globalOptOut'] as bool? ?? false;
-      if (globalOptOut) return false;
-
-      // Check daily ad limit
-      final today = DateTime.now();
-      final todayString =
-          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-      final dailyAdCount = adSettings?['dailyCount']?[todayString] as int? ?? 0;
-      final maxDailyAds = adSettings?['maxDailyAds'] as int? ?? 50;
-
-      if (dailyAdCount >= maxDailyAds) return false;
-
       return true;
     } catch (e) {
-      debugPrint('Error checking ad consent: $e');
-      // Err on the side of caution - don't show ads if there's an error
+      _logger.severe('Error checking if ads can be shown', e);
       return false;
+    }
+  }
+
+  /// Show random ad (interstitial or rewarded) based on user eligibility and cooling periods
+  Future<Map<String, dynamic>> showRandomAd({
+    String? activityId,
+    Map<String, dynamic>? context, required Null Function() onAdShown, required Null Function(dynamic error) onAdFailedToShow,
+  }) async {
+    try {
+      _logger.info('Attempting to show random ad', context);
+
+      // Check if ads can be shown
+      if (!await canShowAds()) {
+        return {
+          'success': false,
+          'error': 'Ads not allowed for this user',
+          'code': 'ADS_NOT_ALLOWED',
+        };
+      }
+
+      // Check cooldowns for both ad types
+      final rewardedCooldown = await _configService.getConfig<int>(
+        'ads.rewarded_cooldown',
+        defaultValue: 300, // 5 minutes
+      );
+
+      final interstitialFrequency = await _configService.getConfig<int>(
+        'ads.interstitial_frequency',
+        defaultValue: 5, // Every 5 activities
+      );
+
+      final now = DateTime.now();
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+          'code': 'USER_NOT_AUTH',
+        };
+      }
+
+      // Get user stats to determine ad eligibility
+      final userStats = await _userService.getUserStats(userId);
+      final totalActivities = userStats['totalActivities'] ?? 0;
+      final lastRewardedAdTime = userStats['lastRewardedAdTime'] as Timestamp?;
+
+      // Check rewarded ad cooldown
+      bool canShowRewarded = true;
+      if (lastRewardedAdTime != null) {
+        final timeSinceLastRewarded =
+            now.difference(lastRewardedAdTime.toDate());
+        canShowRewarded = timeSinceLastRewarded.inSeconds >= rewardedCooldown;
+      }
+
+      // Check interstitial frequency
+      final canShowInterstitial =
+          (totalActivities % interstitialFrequency) == 0;
+
+      // Determine which ad type to show based on availability and random selection
+      String selectedAdType;
+      if (canShowRewarded && canShowInterstitial) {
+        // Both available - random selection with preference for rewarded (70% chance)
+        selectedAdType =
+            Random().nextDouble() < 0.7 ? 'rewarded' : 'interstitial';
+      } else if (canShowRewarded) {
+        selectedAdType = 'rewarded';
+      } else if (canShowInterstitial) {
+        selectedAdType = 'interstitial';
+      } else {
+        // Neither available due to cooldowns
+        final nextRewardedTime = lastRewardedAdTime != null
+            ? lastRewardedAdTime
+                .toDate()
+                .add(Duration(seconds: rewardedCooldown))
+            : now;
+        final nextInterstitialActivity = totalActivities +
+            (interstitialFrequency - (totalActivities % interstitialFrequency));
+
+        return {
+          'success': false,
+          'error': 'Ads on cooldown',
+          'code': 'ADS_ON_COOLDOWN',
+          'nextRewardedTime': nextRewardedTime.toIso8601String(),
+          'nextInterstitialActivity': nextInterstitialActivity,
+        };
+      }
+
+      // Show the selected ad type
+      if (selectedAdType == 'rewarded') {
+        // Check if rewarded ad is ready
+        if (_rewardedAd == null) {
+          _loadRewardedAd();
+          return {
+            'success': false,
+            'error': 'Rewarded ad not ready',
+            'code': 'AD_NOT_READY',
+            'selectedAdType': selectedAdType,
+          };
+        }
+
+        // Show rewarded ad with tracking
+        showRewardedAd(
+          onUserEarnedReward: (reward) {
+            _trackAdEvent(
+              format: AdFormat.rewarded,
+              completed: true,
+              engagementTime: 30,
+              aerEligible: true,
+            );
+          },
+          onAdDismissed: () {
+            _loadRewardedAd(); // Preload next ad
+          },
+        );
+
+        // Update last rewarded ad time
+        await UserService.updateUserProfile(
+          updates: {
+            'stats.lastRewardedAdTime': Timestamp.fromDate(now),
+          },
+        );
+      } else {
+        // Check if interstitial ad is ready
+        if (_interstitialAd == null) {
+          _loadInterstitialAd();
+          return {
+            'success': false,
+            'error': 'Interstitial ad not ready',
+            'code': 'AD_NOT_READY',
+            'selectedAdType': selectedAdType,
+          };
+        }
+
+        // Show interstitial ad
+        showInterstitialAd();
+
+        // Track interstitial ad
+        _trackAdEvent(
+          format: AdFormat.interstitial,
+          completed: true,
+          engagementTime: 10,
+          aerEligible: false, // Interstitials typically don't offer AER
+        );
+      }
+
+      _logger.info('Random ad shown: $selectedAdType');
+      return {
+        'success': true,
+        'selectedAdType': selectedAdType,
+        'availableTypes': {
+          'rewarded': canShowRewarded,
+          'interstitial': canShowInterstitial,
+        },
+      };
+    } catch (e) {
+      _logger.severe('Error showing random ad', e);
+      return {
+        'success': false,
+        'error': 'Failed to show random ad: $e',
+        'code': 'RANDOM_AD_ERROR',
+      };
     }
   }
 
@@ -464,6 +603,10 @@ class EnhancedAdService {
     _rewardedAd?.dispose();
     _bannerAd?.dispose();
   }
+}
+
+class _getDeviceInfo {
+  //TODO: Complete this function
 }
 
 // Widget for easy banner ad integration
@@ -495,7 +638,7 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
   Future<void> _checkAdPermission() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null && widget.showOnlyIfAllowed) {
-      final canShow = await EnhancedAdService().canShowAds(user.uid);
+      final canShow = await EnhancedAdService().canShowAds();
       setState(() => _canShowAds = canShow);
     }
 
